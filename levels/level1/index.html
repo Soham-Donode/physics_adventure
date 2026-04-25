@@ -184,7 +184,7 @@ body { background:#000; font-family:'Press Start 2P',monospace; overflow:hidden;
       <label>Launch Angle θ (0–90°)</label>
       <input type="number" id="angleInput" min="0" max="90" value="45" placeholder="e.g. 45">
       <label>Launch Speed v (10–150 m/s)</label>
-      <input type="number" id="speedInput" min="10" max="150" value="60" placeholder="e.g. 60">
+      <input type="number" id="speedInput" min="10" max="150" value="20" placeholder="e.g. 20">
       <div class="btn-row">
         <button class="btn-cancel" onclick="closeDialog()">Cancel</button>
         <button class="btn-shoot" onclick="shootCannon()">🔥 FIRE!</button>
@@ -254,6 +254,8 @@ const villianImg = new Image();
 villianImg.src = '../../assets/villian.png';
 const cannonImg = new Image();
 cannonImg.src = '../../assets/cannon.png';
+const faceImg = new Image();
+faceImg.src = '../../assets/face.png';
 
 function makeClouds(W) {
   // Clouds removed as per request
@@ -884,46 +886,56 @@ function drawPlayer() {
   // Legs animation
   const legSwing = running ? Math.sin(frame/4 * Math.PI * 2) * 8 : 0;
 
-  // Left leg
-  ctx.fillStyle = '#2266cc';
+  // Legs (Suit Pants)
+  ctx.fillStyle = '#222';
   ctx.beginPath();
   ctx.roundRect(-6, h*0.55, 10, h*0.45 - legSwing*0.3, 3);
   ctx.fill();
-  // Right leg
-  ctx.fillStyle = '#1a55aa';
+  ctx.fillStyle = '#1a1a1a';
   ctx.beginPath();
   ctx.roundRect(2, h*0.55, 10, h*0.45 + legSwing*0.3, 3);
   ctx.fill();
 
   // Shoes
-  ctx.fillStyle = '#111';
+  ctx.fillStyle = '#000';
   ctx.beginPath();ctx.roundRect(-8, h-10+legSwing*0.1, 14, 8, 3);ctx.fill();
   ctx.beginPath();ctx.roundRect(0,  h-10-legSwing*0.1, 14, 8, 3);ctx.fill();
 
-  // Body
-  ctx.fillStyle = '#cc4422';
-  ctx.beginPath();ctx.roundRect(-10, h*0.25, 20, h*0.38, 5);ctx.fill();
+  // Body (Suit Jacket)
+  ctx.fillStyle = '#111';
+  ctx.beginPath();ctx.roundRect(-10, h*0.25, 20, h*0.38, 3);ctx.fill();
+  
+  // Lapels
+  ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-3, h*0.25); ctx.lineTo(-9, h*0.45); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3, h*0.25); ctx.lineTo(9, h*0.45); ctx.stroke();
 
-  // Arms
+  // Shirt & Tie
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.moveTo(-4, h*0.25); ctx.lineTo(4, h*0.25); ctx.lineTo(0, h*0.42); ctx.fill();
+  
+  // Tie (with a slight knot detail)
+  ctx.fillStyle = '#c00'; 
+  ctx.fillRect(-1.5, h*0.25, 3, 3); // knot
+  ctx.fillRect(-1, h*0.28, 2, 8);  // tail
+  
+  // Pocket square
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(4, h*0.34, 4, 1.5);
+
+  // Buttons
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(0, h*0.48, 1.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, h*0.54, 1.2, 0, Math.PI*2); ctx.fill();
+
+  // Arms (Sleeves)
   const armSwing = running ? Math.cos(frame/4*Math.PI*2)*6 : 0;
-  ctx.fillStyle = '#cc4422';
+  ctx.fillStyle = '#111';
   ctx.beginPath();ctx.roundRect(-16, h*0.28+armSwing, 8, 14, 3);ctx.fill();
   ctx.beginPath();ctx.roundRect(8,   h*0.28-armSwing, 8, 14, 3);ctx.fill();
 
-  // Head
-  ctx.fillStyle = '#f0c870';
-  ctx.beginPath();ctx.arc(0, h*0.16, 13, 0, Math.PI*2);ctx.fill();
-
-  // Eyes
-  ctx.fillStyle='#111';
-  ctx.beginPath();ctx.arc(5,h*0.13,3,0,Math.PI*2);ctx.fill();
-  // White highlight
-  ctx.fillStyle='#fff';
-  ctx.beginPath();ctx.arc(6,h*0.12,1,0,Math.PI*2);ctx.fill();
-
-  // Hair
-  ctx.fillStyle='#4a2a0a';
-  ctx.beginPath();ctx.ellipse(0,h*0.06,11,6,0,Math.PI,0);ctx.fill();
+  // Head (replaced with face.png)
+  ctx.drawImage(faceImg, -15, -4, 30, 30);
 
   ctx.restore();
 }
