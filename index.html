@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhysicsQuest – Level 1: Cannonball Siege</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* ── Pixel font ─────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; image-rendering:pixelated; }
+body { background:#5c94fc; font-family:'Press Start 2P',monospace; overflow:hidden; user-select:none; }
+
+#gameCanvas { display:block; }
+
+/* ── Pixel border mixin ─────────────────────── */
+/* top / right / bottom / left : 4px solid black = crisp pixel frame */
+
+/* ── HUD ────────────────────────────────────── */
+#hud {
+  position:fixed; top:0; left:0; right:0;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 16px;
+  background:#3c5aa6;
+  border-bottom:4px solid #1a2a6c;
+  z-index:10; pointer-events:none;
+  image-rendering:pixelated;
+}
+#hud .title { color:#f8f878; font-size:9px; letter-spacing:1px; text-shadow:2px 2px #1a2a6c; }
+#hud .info  { color:#f8f878; font-size:9px; text-shadow:2px 2px #1a2a6c; }
+#hud .keys  { color:#a8d8f8; font-size:7px; }
+
+/* ── Cannon dialog ──────────────────────────── */
+#cannonDialog {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.7);
+  z-index:50; align-items:center; justify-content:center;
+}
+#cannonDialog.show { display:flex; }
+.dialog-box {
+  background:#e8d8a0;
+  /* Pixel border: 4-layer box-shadow for chunky NES-style frame */
+  border:4px solid #000;
+  box-shadow:
+    -4px 0 0 #000, 4px 0 0 #000,
+    0 -4px 0 #000, 0 4px 0 #000,
+    inset -4px 0 0 #b8a870,
+    inset 4px 0 0 #fff8d8,
+    inset 0 -4px 0 #b8a870,
+    inset 0 4px 0 #fff8d8;
+  padding:20px 24px;
+  width:380px;
+  image-rendering:pixelated;
+}
+.dialog-box h2 {
+  color:#3c2800; font-size:10px; margin-bottom:10px;
+  text-shadow:1px 1px #fff8d8;
+  border-bottom:3px solid #3c2800; padding-bottom:8px;
+}
+.dialog-box .sub {
+  color:#5a3800; font-size:7px; margin-bottom:14px;
+  line-height:2; letter-spacing:0.5px;
+}
+.dialog-box label {
+  display:block; color:#3c2800; font-size:7px;
+  margin-bottom:5px; letter-spacing:0.5px;
+}
+.dialog-box input[type=number] {
+  width:100%; padding:8px 10px;
+  background:#fff8d8;
+  border:3px solid #3c2800;
+  box-shadow:inset 2px 2px 0 #b8a870;
+  color:#3c2800; font-family:'Press Start 2P',monospace;
+  font-size:12px; outline:none;
+  margin-bottom:14px;
+  /* allow actual keyboard input */
+  pointer-events:auto;
+}
+.dialog-box input[type=number]:focus {
+  background:#fff;
+  border-color:#e04000;
+  box-shadow:inset 2px 2px 0 #b8a870, 0 0 0 2px #f07830;
+}
+/* hide browser spinner arrows */
+.dialog-box input[type=number]::-webkit-inner-spin-button,
+.dialog-box input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; }
+
+.hint-row { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+.hint-chip {
+  background:#5a8000; border:3px solid #000;
+  box-shadow:2px 2px 0 #1a3000;
+  padding:5px 10px; color:#f8f878;
+  font-family:'Press Start 2P',monospace; font-size:7px;
+  cursor:pointer; letter-spacing:0.5px;
+  transition:transform .1s;
+}
+.hint-chip:hover { transform:translate(-1px,-1px); box-shadow:3px 3px 0 #1a3000; }
+.hint-chip:active { transform:translate(1px,1px); box-shadow:1px 1px 0 #1a3000; }
+
+.btn-row { display:flex; gap:10px; margin-top:4px; }
+.btn-shoot {
+  flex:1; padding:10px;
+  background:#c82000; border:3px solid #000;
+  box-shadow:3px 3px 0 #600000;
+  color:#fff; font-family:'Press Start 2P',monospace;
+  font-size:9px; cursor:pointer; letter-spacing:.5px;
+  transition:transform .1s;
+}
+.btn-shoot:hover { transform:translate(-1px,-1px); box-shadow:4px 4px 0 #600000; }
+.btn-shoot:active { transform:translate(2px,2px); box-shadow:1px 1px 0 #600000; }
+
+.btn-cancel {
+  padding:10px 14px;
+  background:#606060; border:3px solid #000;
+  box-shadow:3px 3px 0 #202020;
+  color:#ddd; font-family:'Press Start 2P',monospace;
+  font-size:8px; cursor:pointer;
+  transition:transform .1s;
+}
+.btn-cancel:hover { transform:translate(-1px,-1px); box-shadow:4px 4px 0 #202020; }
+.btn-cancel:active { transform:translate(2px,2px); box-shadow:1px 1px 0 #202020; }
+
+/* ── Formula box ────────────────────────────── */
+.formula-box {
+  background:#c8b870;
+  border:3px solid #3c2800;
+  box-shadow:inset 2px 2px 0 #b8a060, inset -2px -2px 0 #e8d88c;
+  padding:10px 12px; margin-bottom:14px;
+  color:#3c2000; font-size:7px; line-height:2.2;
+}
+.formula-box code { color:#c03000; font-family:'Press Start 2P',monospace; font-size:7px; }
+
+/* ── Overlay ────────────────────────────────── */
+#overlay {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.78);
+  z-index:100; align-items:center; justify-content:center;
+  flex-direction:column; text-align:center;
+}
+#overlay.show { display:flex; }
+#overlay h1 {
+  font-size:24px; margin-bottom:14px;
+  text-shadow:3px 3px #000;
+}
+#overlay p  { font-size:9px; color:#ccc; margin-bottom:28px; line-height:2; }
+#overlay button {
+  padding:12px 28px;
+  background:#c82000; border:4px solid #000;
+  box-shadow:4px 4px 0 #600000;
+  color:#fff; font-family:'Press Start 2P',monospace;
+  font-size:10px; cursor:pointer;
+}
+#overlay button:hover { box-shadow:6px 6px 0 #600000; transform:translate(-1px,-1px); }
+.win-text  { color:#50f878; }
+.lose-text { color:#f85050; }
+
+/* ── Physics panel ──────────────────────────── */
+#physPanel {
+  display:none; position:fixed; bottom:14px; left:14px;
+  background:#1a1a2e;
+  border:3px solid #000;
+  box-shadow:3px 3px 0 #000;
+  padding:10px 14px;
+  z-index:20; color:#50f050; font-size:7px;
+  min-width:200px; pointer-events:none;
+  line-height:2;
+}
+#physPanel.show { display:block; }
+#physPanel .prow { display:flex; justify-content:space-between; gap:12px; margin-bottom:3px; }
+#physPanel .prow span:last-child { color:#50f8f8; }
+
+/* ── Slow-mo badge ──────────────────────────── */
+#slowBadge {
+  display:none; position:fixed; top:58px; right:14px;
+  background:#c86000;
+  border:3px solid #000;
+  box-shadow:3px 3px 0 #602800;
+  padding:5px 12px;
+  color:#f8f878; font-size:7px;
+  z-index:20; pointer-events:none; letter-spacing:.5px;
+}
+#slowBadge.show { display:block; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <span class="title">⚡ PhysicsQuest — Level 1: Cannonball Siege</span>
+  <span class="info" id="enemyCount">Enemies: 3</span>
+  <span class="keys">Arrow Keys / WASD: Move &nbsp;|&nbsp; Space: Jump &nbsp;|&nbsp; E near cannon: Aim</span>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<!-- Cannon dialog -->
+<div id="cannonDialog">
+  <div class="dialog-box">
+    <h2>🎯 Cannon Control</h2>
+    <p class="sub">Calculate the right angle and speed to eliminate the enemies on the right side!</p>
+    <div class="formula-box">
+      Projectile equations:<br>
+      <code>x(t) = v·cos(θ)·t</code><br>
+      <code>y(t) = v·sin(θ)·t − ½g·t²</code><br>
+      <code>Range = v²·sin(2θ)/g</code>&nbsp;&nbsp;(g = 9.8 m/s²)
+    </div>
+    <label>Launch Angle θ (0–90°)</label>
+    <input type="number" id="angleInput" min="0" max="90" value="45" placeholder="e.g. 45">
+    <label>Launch Speed v (10–150 m/s)</label>
+    <input type="number" id="speedInput" min="10" max="150" value="60" placeholder="e.g. 60">
+    <div class="hint-row">
+      <span class="hint-chip" onclick="fillHint(30,80)">30° / 80</span>
+      <span class="hint-chip" onclick="fillHint(45,70)">45° / 70</span>
+      <span class="hint-chip" onclick="fillHint(60,65)">60° / 65</span>
+      <span class="hint-chip" onclick="fillHint(25,100)">25° / 100</span>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeDialog()">Cancel</button>
+      <button class="btn-shoot" onclick="shootCannon()">🔥 FIRE!</button>
+    </div>
+  </div>
+</div>
+
+<!-- Physics info during flight -->
+<div id="physPanel">
+  <div class="prow"><span>Time</span><span id="pTime">0.00 s</span></div>
+  <div class="prow"><span>X position</span><span id="pX">0 px</span></div>
+  <div class="prow"><span>Y position</span><span id="pY">0 px</span></div>
+  <div class="prow"><span>Vx</span><span id="pVx">0 m/s</span></div>
+  <div class="prow"><span>Vy</span><span id="pVy">0 m/s</span></div>
+  <div class="prow"><span>Speed</span><span id="pSpd">0 m/s</span></div>
+</div>
+
+<div id="slowBadge">SLOW MOTION 0.15×</div>
+
+<!-- Win/lose overlay -->
+<div id="overlay">
+  <h1 id="overlayTitle"></h1>
+  <p  id="overlayMsg"></p>
+  <button onclick="restartGame()">Play Again</button>
+</div>
+
+<script>
+// ─── Canvas setup ───────────────────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ─── Constants ──────────────────────────────────────────────────────────────
+const GRAVITY    = 0.4;       // canvas pixels/frame² (visual)
+const SCALE      = 12;        // px per "meter" for physics display
+const SLOW_MO    = 0.55;      // fast enough to watch, slow enough to learn
+const GROUND_Y   = () => canvas.height - 80;
+const HUD_H      = 50;
+
+// ─── Game state ─────────────────────────────────────────────────────────────
+let state = 'playing'; // playing | dead | won
+let keys  = {};
+
+// ─── Player ─────────────────────────────────────────────────────────────────
+const player = {
+  x: 80, y: 0, w: 28, h: 44,
+  vx: 0, vy: 0,
+  onGround: false,
+  facing: 1,  // 1=right, -1=left
+  frame: 0, frameTimer: 0,
+  nearCannon: false,
+};
+
+// ─── Cannon ─────────────────────────────────────────────────────────────────
+const cannon = {
+  x: 140, y: 0, w: 60, h: 36,
+  angle: 45,   // degrees
+};
+
+// ─── Projectile ─────────────────────────────────────────────────────────────
+let projectile = null;
+// projectile: { x, y, vx, vy, t, fired:bool, trail:[] }
+
+// ─── Enemies ────────────────────────────────────────────────────────────────
+let enemies = [];
+function makeEnemies() {
+  const gY = GROUND_Y();
+  enemies = [
+    { x: canvas.width - 260, y: gY - 44, w: 40, h: 44, alive: true, wobble: 0 },
+    { x: canvas.width - 190, y: gY - 44, w: 40, h: 44, alive: true, wobble: Math.PI/3 },
+    { x: canvas.width - 120, y: gY - 44, w: 40, h: 44, alive: true, wobble: Math.PI*0.7 },
+  ];
+}
+
+// ─── Platforms ──────────────────────────────────────────────────────────────
+let platforms = [];
+function makePlatforms() {
+  const gY = GROUND_Y();
+  platforms = [
+    { x: 0, y: gY, w: canvas.width, h: 80 }, // ground only – no floating platforms
+  ];
+}
+
+// ─── Stars (parallax background) ────────────────────────────────────────────
+const stars = Array.from({length: 120}, () => ({
+  x: Math.random(), y: Math.random(),
+  r: Math.random() * 1.5 + 0.3,
+  brightness: Math.random() * 0.7 + 0.3,
+}));
+
+// ─── Particles (death/hit effects) ──────────────────────────────────────────
+let particles = [];
+function spawnParticles(x, y, color, n=14) {
+  for (let i=0; i<n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = Math.random() * 4 + 1;
+    particles.push({
+      x, y,
+      vx: Math.cos(a)*s, vy: Math.sin(a)*s - 2,
+      life: 1, decay: Math.random()*0.03+0.02,
+      r: Math.random()*6+2,
+      color,
+    });
+  }
+}
+
+// ─── Input ──────────────────────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  // Let the dialog inputs receive keyboard events freely
+  const dialogOpen = document.getElementById('cannonDialog').classList.contains('show');
+  if (dialogOpen) {
+    if (e.code === 'Enter') shootCannon();
+    if (e.code === 'Escape') closeDialog();
+    return; // don't swallow typing keys
+  }
+  keys[e.code] = true;
+  if (e.code === 'KeyE' && player.nearCannon && !projectile && state === 'playing') {
+    openDialog();
+  }
+  if (e.code !== 'F5') e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ─── Dialog helpers ──────────────────────────────────────────────────────────
+function openDialog() {
+  document.getElementById('cannonDialog').classList.add('show');
+}
+function closeDialog() {
+  document.getElementById('cannonDialog').classList.remove('show');
+}
+function fillHint(a, s) {
+  document.getElementById('angleInput').value = a;
+  document.getElementById('speedInput').value = s;
+}
+function shootCannon() {
+  const angleDeg = parseFloat(document.getElementById('angleInput').value);
+  const speed    = parseFloat(document.getElementById('speedInput').value);
+  if (isNaN(angleDeg) || isNaN(speed)) return;
+  const angle = (Math.clamp ? Math.clamp : clamp)(angleDeg, 0, 90) * Math.PI / 180;
+  const sv    = clamp(speed, 10, 150);
+
+  // Convert physics speed (m/s) to canvas px/frame
+  const pxSpeed = sv * SCALE / 60;
+
+  projectile = {
+    x:  cannon.x + cannon.w + 10,
+    y:  cannon.y + cannon.h / 2,
+    vx: Math.cos(angle) * pxSpeed,
+    vy: -Math.sin(angle) * pxSpeed,
+    t:  0,
+    trail: [],
+    slowFactor: SLOW_MO,
+    physAngle: angleDeg,
+    physSpeed: sv,
+  };
+  cannon.angle = angleDeg;
+  closeDialog();
+  document.getElementById('slowBadge').classList.add('show');
+  document.getElementById('physPanel').classList.add('show');
+}
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+// ─── Physics update ──────────────────────────────────────────────────────────
+let lastTime = 0;
+function update(dt) {
+  if (state !== 'playing') return;
+
+  const gY = GROUND_Y();
+  cannon.y = gY - cannon.h;
+
+  // Player movement
+  const spd = keys['ShiftLeft'] || keys['ShiftRight'] ? 5.5 : 3.2;
+  if (keys['ArrowLeft']  || keys['KeyA']) { player.vx = -spd; player.facing = -1; }
+  else if (keys['ArrowRight'] || keys['KeyD']) { player.vx = spd;  player.facing =  1; }
+  else player.vx *= 0.7;
+
+  if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && player.onGround) {
+    player.vy = -10;
+    player.onGround = false;
+  }
+
+  player.vy += GRAVITY;
+  player.x  += player.vx;
+  player.y  += player.vy;
+
+  // Clamp left bound
+  if (player.x < 0) { player.x = 0; player.vx = 0; }
+
+  // Check right boundary – win!
+  if (player.x + player.w > canvas.width - 10) {
+    if (enemies.every(e => !e.alive)) {
+      showWin();
+      return;
+    } else {
+      player.x = canvas.width - 10 - player.w;
+    }
+  }
+
+  // Platform collision
+  player.onGround = false;
+  for (const p of platforms) {
+    if (player.x + player.w > p.x && player.x < p.x + p.w) {
+      if (player.y + player.h > p.y && player.y + player.h < p.y + p.h + player.vy + 2 && player.vy >= 0) {
+        player.y  = p.y - player.h;
+        player.vy = 0;
+        player.onGround = true;
+      }
+    }
+  }
+
+  // Near cannon check
+  const dx = Math.abs((player.x + player.w/2) - (cannon.x + cannon.w/2));
+  player.nearCannon = (dx < 80) && player.onGround;
+
+  // Walk animation
+  if (Math.abs(player.vx) > 0.5) {
+    player.frameTimer += dt;
+    if (player.frameTimer > 120) { player.frame = (player.frame + 1) % 4; player.frameTimer = 0; }
+  } else {
+    player.frame = 0;
+  }
+
+  // Enemy wobble
+  enemies.forEach(e => { e.wobble += 0.05; });
+
+  // Projectile update (slow-mo)
+  if (projectile) {
+    const sf = projectile.slowFactor;
+    const steps = 3; // sub-steps for accuracy
+    for (let s=0; s<steps; s++) {
+      projectile.vx += 0;                    // no air resistance for now
+      projectile.vy += GRAVITY * sf / steps;
+      projectile.x  += projectile.vx * sf / steps;
+      projectile.y  += projectile.vy * sf / steps;
+      projectile.t  += dt * sf / (steps * 1000);
+    }
+
+    // Store trail
+    projectile.trail.push({ x: projectile.x, y: projectile.y });
+    if (projectile.trail.length > 80) projectile.trail.shift();
+
+    // Update physics panel (real physics values)
+    const elapsed = projectile.t;
+    const px = elapsed * projectile.physSpeed * Math.cos(projectile.physAngle * Math.PI/180);
+    const py = elapsed * projectile.physSpeed * Math.sin(projectile.physAngle * Math.PI/180)
+               - 0.5 * 9.8 * elapsed * elapsed;
+    const vpx = projectile.physSpeed * Math.cos(projectile.physAngle * Math.PI/180);
+    const vpy = projectile.physSpeed * Math.sin(projectile.physAngle * Math.PI/180) - 9.8 * elapsed;
+    document.getElementById('pTime').textContent = elapsed.toFixed(2) + ' s';
+    document.getElementById('pX').textContent    = px.toFixed(1) + ' m';
+    document.getElementById('pY').textContent    = py.toFixed(1) + ' m';
+    document.getElementById('pVx').textContent   = vpx.toFixed(1) + ' m/s';
+    document.getElementById('pVy').textContent   = vpy.toFixed(1) + ' m/s';
+    document.getElementById('pSpd').textContent  = Math.hypot(vpx, vpy).toFixed(1) + ' m/s';
+
+    // Hit ground
+    if (projectile.y > gY) {
+      spawnParticles(projectile.x, gY, '#f0a040');
+      clearProjectile();
+    }
+
+    // Hit enemies
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      if (projectile.x > e.x && projectile.x < e.x + e.w &&
+          projectile.y > e.y && projectile.y < e.y + e.h) {
+        e.alive = false;
+        spawnParticles(e.x + e.w/2, e.y + e.h/2, '#ff5050', 20);
+        document.getElementById('enemyCount').textContent =
+          'Enemies: ' + enemies.filter(x=>x.alive).length;
+        clearProjectile();
+        if (enemies.every(x => !x.alive)) {
+          // show message
+          showHint('All enemies eliminated! Run to the right edge!');
+        }
+      }
+    }
+
+    // Off-screen right
+    if (projectile.x > canvas.width + 20) clearProjectile();
+  }
+
+  // Particles
+  particles.forEach(p => {
+    p.x   += p.vx; p.y   += p.vy; p.vy  += 0.1;
+    p.life -= p.decay;
+  });
+  particles = particles.filter(p => p.life > 0);
+}
+
+function clearProjectile() {
+  projectile = null;
+  document.getElementById('slowBadge').classList.remove('show');
+  document.getElementById('physPanel').classList.remove('show');
+}
+
+// ─── Rendering ───────────────────────────────────────────────────────────────
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  const gY = GROUND_Y();
+
+  // Pixel sky – flat colour (matches tile game palette)
+  ctx.fillStyle = '#5c94fc';
+  ctx.fillRect(0, HUD_H, W, H);
+
+  // Sun
+  const sunX = W * 0.75, sunY = HUD_H + 70;
+  const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 90);
+  sunGlow.addColorStop(0,   'rgba(255,240,100,0.55)');
+  sunGlow.addColorStop(0.4, 'rgba(255,220,50,0.2)');
+  sunGlow.addColorStop(1,   'rgba(255,220,50,0)');
+  ctx.beginPath(); ctx.arc(sunX, sunY, 90, 0, Math.PI*2);
+  ctx.fillStyle = sunGlow; ctx.fill();
+  ctx.beginPath(); ctx.arc(sunX, sunY, 38, 0, Math.PI*2);
+  ctx.fillStyle = '#ffe066'; ctx.fill();
+  ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 2; ctx.stroke();
+
+  // Fluffy clouds
+  drawClouds(W, HUD_H);
+
+  // Distant mountains
+  drawMountains(W, gY);
+
+  // Tiled ground
+  drawGroundTiles(W, gY, H);
+
+  // Right boundary danger zone
+  ctx.fillStyle = 'rgba(80,200,80,0.06)';
+  ctx.fillRect(W - 30, gY - 300, 30, 300);
+  ctx.strokeStyle = 'rgba(80,200,80,0.4)';
+  ctx.setLineDash([6,6]);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(W - 30, gY - 320);
+  ctx.lineTo(W - 30, gY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#f8f878';
+  ctx.font = '8px "Press Start 2P", monospace';
+  ctx.textAlign = 'right';
+  ctx.fillText('GOAL >', W - 36, gY - 320);
+  ctx.textAlign = 'left';
+
+  // Enemy blocked notice
+  if (enemies.some(e => e.alive)) {
+    ctx.fillStyle = '#f85050';
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('! ENEMIES BLOCK', W - 36, gY - 305);
+    ctx.textAlign = 'left';
+  }
+
+  // Distance ruler: cannon tip → each alive enemy
+  drawDistanceLabels(gY);
+
+  // Cannon
+  drawCannon();
+
+  // Projectile trail
+  if (projectile && projectile.trail.length > 1) {
+    for (let i=1; i<projectile.trail.length; i++) {
+      const t = projectile.trail[i];
+      const t0 = projectile.trail[i-1];
+      const alpha = i / projectile.trail.length * 0.7;
+      ctx.strokeStyle = `rgba(255,180,50,${alpha})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(t0.x, t0.y);
+      ctx.lineTo(t.x, t.y);
+      ctx.stroke();
+    }
+    // Dashed predicted path
+    drawPredictedPath();
+  }
+
+  // Projectile ball
+  if (projectile) {
+    const glowGrad = ctx.createRadialGradient(
+      projectile.x, projectile.y, 0,
+      projectile.x, projectile.y, 14
+    );
+    glowGrad.addColorStop(0, '#fff8e0');
+    glowGrad.addColorStop(0.3, '#ffcc40');
+    glowGrad.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(projectile.x, projectile.y, 14, 0, Math.PI*2);
+    ctx.fillStyle = glowGrad;
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(projectile.x, projectile.y, 7, 0, Math.PI*2);
+    ctx.fillStyle = '#ff8800';
+    ctx.fill();
+    ctx.strokeStyle = '#ffcc40';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Enemies
+  for (const e of enemies) {
+    if (!e.alive) continue;
+    drawEnemy(e);
+  }
+
+  // Player
+  drawPlayer();
+
+  // Particles
+  for (const p of particles) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2);
+    ctx.fillStyle = p.color;
+    ctx.globalAlpha = p.life;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Near cannon prompt
+  if (player.nearCannon && !projectile) {
+    ctx.fillStyle = 'rgba(180,160,255,0.9)';
+    ctx.font = 'bold 13px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText('[E] Aim Cannon', cannon.x + cannon.w/2, cannon.y - 14);
+    ctx.textAlign = 'left';
+  }
+}
+
+// ─── Tile ground ─────────────────────────────────────────────────────────────
+function drawGroundTiles(W, gY, H) {
+  const T = 32; // tile size in pixels
+
+  // Row 0: grass tiles (top)
+  const grassColors  = ['#58b848', '#50a840', '#60c050'];
+  const dirtColors   = ['#a85830', '#9a5028', '#b06038'];
+  const darkDirt     = ['#804020', '#704018', '#885028'];
+
+  // Fill full ground area with base dirt colour first
+  ctx.fillStyle = '#9a5028';
+  ctx.fillRect(0, gY, W, H - gY);
+
+  // Draw tile rows
+  const rows = Math.ceil((H - gY) / T) + 1;
+  for (let row = 0; row < rows; row++) {
+    const ty = gY + row * T;
+    const cols = Math.ceil(W / T) + 1;
+    for (let col = 0; col < cols; col++) {
+      const tx = col * T;
+      const isGrass = row === 0;
+      const seed = (col * 3 + row * 7) % 3;
+
+      // Tile base
+      ctx.fillStyle = isGrass ? grassColors[seed] : (row < 3 ? dirtColors[seed] : darkDirt[seed]);
+      ctx.fillRect(tx, ty, T, T);
+
+      if (isGrass) {
+        // Lighter top highlight
+        ctx.fillStyle = '#78d860';
+        ctx.fillRect(tx + 1, ty + 1, T - 2, 4);
+        // Dark bottom shadow
+        ctx.fillStyle = '#389828';
+        ctx.fillRect(tx + 1, ty + T - 4, T - 2, 3);
+      } else {
+        // Dirt crack / pebble details
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillRect(tx + 6, ty + 8, 5, 3);
+        ctx.fillRect(tx + T - 12, ty + T - 10, 4, 2);
+      }
+
+      // Pixel-border between tiles
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tx + 0.5, ty + 0.5, T - 1, T - 1);
+    }
+  }
+}
+
+function drawClouds(W, hudH) {
+  // Static fluffy clouds for day sky
+  const clouds = [
+    { x: W*0.12, y: hudH+55, r: 32 },
+    { x: W*0.35, y: hudH+40, r: 26 },
+    { x: W*0.55, y: hudH+70, r: 38 },
+    { x: W*0.85, y: hudH+52, r: 28 },
+  ];
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  for (const c of clouds) {
+    ctx.beginPath();
+    ctx.arc(c.x,       c.y,       c.r,     0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(c.x+c.r*.8, c.y+6,   c.r*.7,  0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(c.x-c.r*.7, c.y+8,   c.r*.65, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(c.x+c.r*.2, c.y-c.r*.4, c.r*.6, 0, Math.PI*2); ctx.fill();
+  }
+}
+
+function drawMountains(W, gY) {
+  // Lighter, daytime hill silhouettes
+  ctx.fillStyle = 'rgba(100,160,80,0.45)';
+  ctx.beginPath();
+  ctx.moveTo(0, gY);
+  const pts = [
+    [0,gY], [80,gY-80], [160,gY-40], [240,gY-110], [320,gY-60],
+    [400,gY-130], [480,gY-70], [560,gY-140], [640,gY-80],
+    [720,gY-120], [800,gY-50], [W,gY-90], [W,gY]
+  ];
+  pts.forEach(([x,y]) => ctx.lineTo(x,y));
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(80,140,60,0.3)';
+  ctx.beginPath();
+  ctx.moveTo(0, gY);
+  const pts2 = [
+    [0,gY], [120,gY-50], [200,gY-20], [300,gY-80], [400,gY-40],
+    [500,gY-90], [600,gY-45], [700,gY-100], [W,gY-60], [W,gY]
+  ];
+  pts2.forEach(([x,y]) => ctx.lineTo(x,y));
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawDistanceLabels(gY) {
+  // Only label the middle enemy (index 1) as the reference distance
+  const mid = enemies[1];
+  if (!mid || !mid.alive) return;
+
+  // Horizontal endpoints along the dark-green ground strip
+  const startX = cannon.x + cannon.w;     // right edge of cannon base
+  const endX   = mid.x + mid.w / 2;       // centre-x of middle enemy
+  const lineY  = gY + 6;                  // sits on the dark-green strip
+
+  // Horizontal distance in metres
+  const meters = ((endX - startX) / SCALE).toFixed(1);
+
+  ctx.save();
+
+  // Main horizontal dashed line
+  ctx.strokeStyle = '#ffe066';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 5]);
+  ctx.beginPath();
+  ctx.moveTo(startX, lineY);
+  ctx.lineTo(endX,   lineY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Tick marks at both ends
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(startX, lineY - 6); ctx.lineTo(startX, lineY + 6);
+  ctx.moveTo(endX,   lineY - 6); ctx.lineTo(endX,   lineY + 6);
+  ctx.stroke();
+
+  // Label centred above the line
+  const mx = (startX + endX) / 2;
+  const my = lineY - 8;
+  ctx.font = 'bold 12px monospace';
+  const label = String.fromCharCode(8596) + ' ' + meters + ' m';
+  const tw = ctx.measureText(label).width;
+  ctx.fillStyle = 'rgba(10,10,10,0.65)';
+  ctx.beginPath();
+  ctx.roundRect(mx - tw/2 - 6, my - 14, tw + 12, 20, 4);
+  ctx.fill();
+  ctx.fillStyle = '#ffe066';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, mx, my);
+  ctx.textAlign = 'left';
+
+  ctx.restore();
+}
+
+function drawCannon() {
+  const gY = GROUND_Y();
+  cannon.y = gY - cannon.h;
+
+  // Wheel
+  ctx.fillStyle = '#5a3a1a';
+  ctx.beginPath();
+  ctx.arc(cannon.x + 20, cannon.y + cannon.h + 8, 18, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#8a6a3a';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Spokes
+  for (let i=0;i<6;i++){
+    const a = i/6*Math.PI*2;
+    ctx.strokeStyle='#7a5a2a';ctx.lineWidth=2;
+    ctx.beginPath();
+    ctx.moveTo(cannon.x+20,cannon.y+cannon.h+8);
+    ctx.lineTo(cannon.x+20+Math.cos(a)*16,cannon.y+cannon.h+8+Math.sin(a)*16);
+    ctx.stroke();
+  }
+
+  // Body
+  ctx.fillStyle = '#4a3a28';
+  ctx.beginPath();
+  ctx.roundRect(cannon.x, cannon.y, cannon.w - 10, cannon.h, 6);
+  ctx.fill();
+  ctx.strokeStyle='#6a5a38';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Barrel
+  const bCx = cannon.x + cannon.w - 10;
+  const bCy = cannon.y + cannon.h/2;
+  const ang  = -cannon.angle * Math.PI/180;
+  const bLen = 50;
+
+  ctx.save();
+  ctx.translate(bCx, bCy);
+  ctx.rotate(ang);
+  ctx.fillStyle = '#2a2018';
+  ctx.beginPath();
+  ctx.roundRect(0, -9, bLen, 18, 4);
+  ctx.fill();
+  ctx.strokeStyle='#5a4a28';ctx.lineWidth=1.5;ctx.stroke();
+
+  // Angle indicator
+  ctx.strokeStyle='rgba(160,140,255,0.5)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(bLen+10,0);ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.restore();
+
+  // Angle arc
+  ctx.strokeStyle='rgba(160,140,255,0.4)';ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.arc(bCx, bCy, 24, ang, 0);
+  ctx.stroke();
+
+  // Label
+  ctx.fillStyle='rgba(160,140,255,0.8)';ctx.font='11px monospace';
+  ctx.fillText(cannon.angle+'°', bCx+28, bCy-8);
+}
+
+function drawPredictedPath() {
+  if (!projectile) return;
+  // Show dotted prediction from current pos
+  const gY = GROUND_Y();
+  ctx.strokeStyle = 'rgba(255,220,80,0.2)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4,6]);
+  ctx.beginPath();
+  let px = projectile.x, py = projectile.y;
+  let pvx = projectile.vx, pvy = projectile.vy;
+  ctx.moveTo(px, py);
+  for (let i=0; i<200; i++) {
+    pvy += GRAVITY * projectile.slowFactor;
+    px  += pvx * projectile.slowFactor;
+    py  += pvy * projectile.slowFactor;
+    if (py > gY || px > canvas.width + 50) break;
+    if (i % 3 === 0) ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawEnemy(e) {
+  const bob = Math.sin(e.wobble) * 3;
+  const ex = e.x, ey = e.y + bob;
+
+  // Body (pig-like, Angry Birds style)
+  ctx.fillStyle = '#3ab83a';
+  ctx.beginPath();
+  ctx.arc(ex + e.w/2, ey + e.h/2, e.w/2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = '#2a8a2a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Helmet
+  ctx.fillStyle = '#888';
+  ctx.beginPath();
+  ctx.ellipse(ex+e.w/2, ey+e.h/2-8, e.w/2, e.h*0.3, 0, Math.PI, 0);
+  ctx.fill();
+  ctx.strokeStyle='#666';ctx.lineWidth=1;ctx.stroke();
+
+  // Eyes
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.arc(ex+e.w/2-6,ey+e.h/2-2,6,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(ex+e.w/2+6,ey+e.h/2-2,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#111';
+  ctx.beginPath();ctx.arc(ex+e.w/2-5,ey+e.h/2-2,3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(ex+e.w/2+7,ey+e.h/2-2,3,0,Math.PI*2);ctx.fill();
+
+  // Angry eyebrows
+  ctx.strokeStyle='#111';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(ex+e.w/2-10,ey+e.h/2-9);ctx.lineTo(ex+e.w/2-2,ey+e.h/2-7);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(ex+e.w/2+10,ey+e.h/2-9);ctx.lineTo(ex+e.w/2+2,ey+e.h/2-7);ctx.stroke();
+
+  // Snout
+  ctx.fillStyle='#5acc5a';
+  ctx.beginPath();ctx.ellipse(ex+e.w/2,ey+e.h/2+4,6,4,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#3a9a3a';
+  ctx.beginPath();ctx.arc(ex+e.w/2-2,ey+e.h/2+4,1.5,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(ex+e.w/2+2,ey+e.h/2+4,1.5,0,Math.PI*2);ctx.fill();
+
+  // Hitbox (subtle glow)
+  ctx.strokeStyle='rgba(255,80,80,0.3)';ctx.lineWidth=1;
+  ctx.setLineDash([3,3]);
+  ctx.strokeRect(ex, ey, e.w, e.h);
+  ctx.setLineDash([]);
+}
+
+function drawPlayer() {
+  const px = player.x, py = player.y;
+  const w = player.w, h = player.h;
+  const f = player.facing;
+  const running = Math.abs(player.vx) > 0.5;
+  const frame = player.frame;
+
+  ctx.save();
+  ctx.translate(px + w/2, py);
+  if (f === -1) ctx.scale(-1, 1);
+
+  // Legs animation
+  const legSwing = running ? Math.sin(frame/4 * Math.PI * 2) * 8 : 0;
+
+  // Left leg
+  ctx.fillStyle = '#2266cc';
+  ctx.beginPath();
+  ctx.roundRect(-6, h*0.55, 10, h*0.45 - legSwing*0.3, 3);
+  ctx.fill();
+  // Right leg
+  ctx.fillStyle = '#1a55aa';
+  ctx.beginPath();
+  ctx.roundRect(2, h*0.55, 10, h*0.45 + legSwing*0.3, 3);
+  ctx.fill();
+
+  // Shoes
+  ctx.fillStyle = '#111';
+  ctx.beginPath();ctx.roundRect(-8, h-10+legSwing*0.1, 14, 8, 3);ctx.fill();
+  ctx.beginPath();ctx.roundRect(0,  h-10-legSwing*0.1, 14, 8, 3);ctx.fill();
+
+  // Body
+  ctx.fillStyle = '#cc4422';
+  ctx.beginPath();ctx.roundRect(-10, h*0.25, 20, h*0.38, 5);ctx.fill();
+
+  // Arms
+  const armSwing = running ? Math.cos(frame/4*Math.PI*2)*6 : 0;
+  ctx.fillStyle = '#cc4422';
+  ctx.beginPath();ctx.roundRect(-16, h*0.28+armSwing, 8, 14, 3);ctx.fill();
+  ctx.beginPath();ctx.roundRect(8,   h*0.28-armSwing, 8, 14, 3);ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#f0c870';
+  ctx.beginPath();ctx.arc(0, h*0.16, 13, 0, Math.PI*2);ctx.fill();
+
+  // Eyes
+  ctx.fillStyle='#111';
+  ctx.beginPath();ctx.arc(5,h*0.13,3,0,Math.PI*2);ctx.fill();
+  // White highlight
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.arc(6,h*0.12,1,0,Math.PI*2);ctx.fill();
+
+  // Hair
+  ctx.fillStyle='#4a2a0a';
+  ctx.beginPath();ctx.ellipse(0,h*0.06,11,6,0,Math.PI,0);ctx.fill();
+
+  ctx.restore();
+}
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+let hintTimeout;
+function showHint(msg) {
+  clearTimeout(hintTimeout);
+  const el = document.getElementById('enemyCount');
+  const prev = el.textContent;
+  el.textContent = msg;
+  el.style.color = '#80ffb0';
+  hintTimeout = setTimeout(() => {
+    el.textContent = 'Enemies: ' + enemies.filter(e=>e.alive).length;
+    el.style.color = '';
+  }, 3000);
+}
+
+// ─── Win / lose ───────────────────────────────────────────────────────────────
+function showWin() {
+  state = 'won';
+  document.getElementById('overlayTitle').textContent = '🎉 Level Complete!';
+  document.getElementById('overlayTitle').className = 'win-text';
+  document.getElementById('overlayMsg').textContent =
+    'You calculated the perfect trajectory and made it to the next level!';
+  document.getElementById('overlay').classList.add('show');
+}
+
+function restartGame() {
+  state = 'playing';
+  projectile = null;
+  clearProjectile();
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('enemyCount').textContent = 'Enemies: 3';
+  const gY = GROUND_Y();
+  player.x = 80; player.y = gY - player.h;
+  player.vx = 0; player.vy = 0;
+  makeEnemies();
+  makePlatforms();
+  particles = [];
+}
+
+// ─── Game loop ────────────────────────────────────────────────────────────────
+function loop(ts) {
+  const dt = Math.min(ts - lastTime, 32);
+  lastTime = ts;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+function init() {
+  const gY = GROUND_Y();
+  player.y = gY - player.h;
+  makeEnemies();
+  makePlatforms();
+  requestAnimationFrame(ts => { lastTime = ts; requestAnimationFrame(loop); });
+}
+
+init();
+</script>
+</body>
+</html>
