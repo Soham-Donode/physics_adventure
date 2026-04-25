@@ -10,9 +10,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 * { margin:0; padding:0; box-sizing:border-box; image-rendering:pixelated; }
-body { background:#5c94fc; font-family:'Press Start 2P',monospace; overflow:hidden; user-select:none; }
+body { background:#000; font-family:'Press Start 2P',monospace; overflow:hidden; user-select:none; }
 
-#gameCanvas { display:block; }
+#viewport {
+  position: absolute;
+  width: 1200px;
+  height: 900px;
+  background: #5c94fc;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+  border: 4px solid #333;
+  transform-origin: 0 0;
+}
+
+#gameCanvas { display:block; width:100%; height:100%; }
 
 /* ── Pixel border mixin ─────────────────────── */
 /* top / right / bottom / left : 4px solid black = crisp pixel frame */
@@ -32,8 +43,34 @@ body { background:#5c94fc; font-family:'Press Start 2P',monospace; overflow:hidd
 #hud .keys  { color:#a8d8f8; font-size:7px; }
 
 /* ── Cannon dialog ──────────────────────────── */
+/* ── Overlay ────────────────────────────────── */
+#overlay {
+  position:absolute; inset:0;
+  background:rgba(0,0,0,0.85);
+  z-index:100; display:flex; align-items:center; justify-content:center;
+  flex-direction:column; text-align:center;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.8s ease;
+}
+#overlay.show { opacity:1; pointer-events:auto; }
+#overlay h1 {
+  font-size:24px; margin-bottom:14px;
+  text-shadow:3px 3px #000;
+}
+#overlay p  { font-size:9px; color:#ccc; margin-bottom:28px; line-height:2; }
+#overlay button {
+  padding:12px 28px;
+  background:#c82000; border:4px solid #000;
+  box-shadow:4px 4px 0 #600000;
+  color:#fff; font-family:'Press Start 2P',monospace;
+  font-size:10px; cursor:pointer;
+}
+#overlay button:hover { box-shadow:6px 6px 0 #600000; transform:translate(-1px,-1px); }
+.win-text  { color:#50f878; }
+.lose-text { color:#f85050; }
+
 #cannonDialog {
-  display:none; position:fixed; inset:0;
+  display:none; position:absolute; inset:0;
   background:rgba(0,0,0,0.7);
   z-index:50; align-items:center; justify-content:center;
 }
@@ -120,72 +157,48 @@ body { background:#5c94fc; font-family:'Press Start 2P',monospace; overflow:hidd
 }
 .formula-box code { color:#c03000; font-family:'Press Start 2P',monospace; font-size:7px; }
 
-/* ── Overlay ────────────────────────────────── */
-#overlay {
-  position:fixed; inset:0;
-  background:rgba(0,0,0,0.85);
-  z-index:100; display:flex; align-items:center; justify-content:center;
-  flex-direction:column; text-align:center;
-  opacity:0; pointer-events:none;
-  transition:opacity 0.8s ease;
-}
-#overlay.show { opacity:1; pointer-events:auto; }
-#overlay h1 {
-  font-size:24px; margin-bottom:14px;
-  text-shadow:3px 3px #000;
-}
-#overlay p  { font-size:9px; color:#ccc; margin-bottom:28px; line-height:2; }
-#overlay button {
-  padding:12px 28px;
-  background:#c82000; border:4px solid #000;
-  box-shadow:4px 4px 0 #600000;
-  color:#fff; font-family:'Press Start 2P',monospace;
-  font-size:10px; cursor:pointer;
-}
-#overlay button:hover { box-shadow:6px 6px 0 #600000; transform:translate(-1px,-1px); }
-.win-text  { color:#50f878; }
-.lose-text { color:#f85050; }
-
 </style>
 </head>
 <body>
 
-<div id="hud">
-  <span class="title">⚡ PhysicsQuest — Level 1: Cannonball Siege</span>
-  <span class="info" id="enemyCount">Enemies: 3</span>
-  <span class="keys">Arrow Keys / WASD: Move &nbsp;|&nbsp; Space: Jump &nbsp;|&nbsp; E near cannon: Aim</span>
-</div>
+<div id="viewport">
+  <div id="hud">
+    <span class="title">⚡ PhysicsQuest — Level 1: Cannonball Siege</span>
+    <span class="info" id="enemyCount">Enemies: 3</span>
+    <span class="keys">Arrow Keys / WASD: Move &nbsp;|&nbsp; Space: Jump &nbsp;|&nbsp; E near cannon: Aim</span>
+  </div>
 
-<canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas"></canvas>
 
-<!-- Cannon dialog -->
-<div id="cannonDialog">
-  <div class="dialog-box">
-    <h2>🎯 Cannon Control</h2>
-    <p class="sub">Calculate the right angle and speed to eliminate the enemies on the right side!</p>
-    <div class="formula-box">
-      Projectile equations:<br>
-      <code>x(t) = v·cos(θ)·t</code><br>
-      <code>y(t) = v·sin(θ)·t − ½g·t²</code><br>
-      <code>Range = v²·sin(2θ)/g</code>&nbsp;&nbsp;(g = 9.8 m/s²)
-    </div>
-    <label>Launch Angle θ (0–90°)</label>
-    <input type="number" id="angleInput" min="0" max="90" value="45" placeholder="e.g. 45">
-    <label>Launch Speed v (10–150 m/s)</label>
-    <input type="number" id="speedInput" min="10" max="150" value="60" placeholder="e.g. 60">
-    <div class="btn-row">
-      <button class="btn-cancel" onclick="closeDialog()">Cancel</button>
-      <button class="btn-shoot" onclick="shootCannon()">🔥 FIRE!</button>
+  <!-- Cannon dialog -->
+  <div id="cannonDialog">
+    <div class="dialog-box">
+      <h2>🎯 Cannon Control</h2>
+      <p class="sub">Calculate the right angle and speed to eliminate the enemies on the right side!</p>
+      <div class="formula-box">
+        Projectile equations:<br>
+        <code>x(t) = v·cos(θ)·t</code><br>
+        <code>y(t) = v·sin(θ)·t − ½g·t²</code><br>
+        <code>Range = v²·sin(2θ)/g</code>&nbsp;&nbsp;(g = 9.8 m/s²)
+      </div>
+      <label>Launch Angle θ (0–90°)</label>
+      <input type="number" id="angleInput" min="0" max="90" value="45" placeholder="e.g. 45">
+      <label>Launch Speed v (10–150 m/s)</label>
+      <input type="number" id="speedInput" min="10" max="150" value="60" placeholder="e.g. 60">
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="closeDialog()">Cancel</button>
+        <button class="btn-shoot" onclick="shootCannon()">🔥 FIRE!</button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Win/lose overlay -->
-<div id="overlay">
-  <h1 id="overlayTitle"></h1>
-  <p  id="overlayMsg"></p>
-  <button onclick="restartGame()">Play Again</button>
-  <button onclick="window.location.href='../../index.html'" style="margin-top:12px;background:#3c5aa6;box-shadow:4px 4px 0 #1a2a6c;">🏠 Menu</button>
+  <!-- Win/lose overlay -->
+  <div id="overlay">
+    <h1 id="overlayTitle"></h1>
+    <p  id="overlayMsg"></p>
+    <button onclick="restartGame()">Play Again</button>
+    <button onclick="window.location.href='../../index.html'" style="margin-top:12px;background:#3c5aa6;box-shadow:4px 4px 0 #1a2a6c;">🏠 Menu</button>
+  </div>
 </div>
 
 <script>
@@ -194,16 +207,38 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 function resize() {
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
+  const vp = document.getElementById('viewport');
+  const internalW = 1200;
+  const internalH = 900;
+  const targetRatio = internalW / internalH;
+  
+  let w = window.innerWidth;
+  let h = window.innerHeight;
+  
+  if (w / h > targetRatio) {
+    w = h * targetRatio;
+  } else {
+    h = w / targetRatio;
+  }
+  
+  canvas.width = internalW;
+  canvas.height = internalH;
+  
+  const scale = h / internalH;
+  vp.style.transform = `scale(${scale})`;
+  
+  // Center it
+  vp.style.left = (window.innerWidth - w) / 2 + 'px';
+  vp.style.top = (window.innerHeight - h) / 2 + 'px';
 }
 resize();
 window.addEventListener('resize', resize);
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-const GRAVITY    = 0.4;       // canvas pixels/frame² (visual)
-const SCALE      = 12;        // px per "meter" for physics display
-const SLOW_MO    = 0.55;      // fast enough to watch, slow enough to learn
+const GRAVITY_PLAYER = 0.4;    // canvas pixels/frame² (feel-based)
+const SCALE          = 10;     // px per "meter" for physics display
+const G_PHYSICS      = 9.8;    // m/s² (real world gravity)
+const SLOW_MO    = 1.0;      // real-time speed for better action
 const GROUND_Y   = () => canvas.height - 80;
 const HUD_H      = 50;
 
@@ -213,19 +248,15 @@ let keys  = {};
 let shake = 0;
 let muzzleFlash = 0;
 let hitEffects = []; // {x, y, text, life}
-let clouds = [];
-const cloudImg = new Image();
-cloudImg.src = '../../assets/cloud.png';
+const skyImg = new Image();
+skyImg.src = '../../assets/sky.png';
 const villianImg = new Image();
 villianImg.src = '../../assets/villian.png';
+const cannonImg = new Image();
+cannonImg.src = '../../assets/cannon.png';
 
 function makeClouds(W) {
-  clouds = Array.from({length: 6}, () => ({
-    x: Math.random() * W,
-    y: 60 + Math.random() * 100,
-    r: 20 + Math.random() * 20,
-    s: 0.2 + Math.random() * 0.4
-  }));
+  // Clouds removed as per request
 }
 const player = {
   x: 80, y: 0, w: 28, h: 44,
@@ -238,7 +269,7 @@ const player = {
 
 // ─── Cannon ─────────────────────────────────────────────────────────────────
 const cannon = {
-  x: 140, y: 0, w: 60, h: 36,
+  x: 60, y: 0, w: 140, h: 84,
   angle: 45,   // degrees
 };
 
@@ -252,7 +283,7 @@ function makeEnemies() {
   const gY   = GROUND_Y();
   const EW   = 52, EH = 58;
   // cannon right-edge (startX of ruler) + 90 m in pixels = middle enemy centre
-  const midCx = (cannon.x + cannon.w) + 90 * SCALE;  // = 200 + 1080 = 1280
+  const midCx = (cannon.x + cannon.w) + 90 * SCALE; 
   const midX  = midCx - EW / 2;                       // enemy.x so centre = midCx
   enemies = [
     { x: midX - 80, y: gY - EH, w: EW, h: EH, alive: true, wobble: 0 },
@@ -324,14 +355,14 @@ function shootCannon() {
   const angle = (Math.clamp ? Math.clamp : clamp)(angleDeg, 0, 90) * Math.PI / 180;
   const sv    = clamp(speed, 10, 150);
 
-  // Convert physics speed (m/s) to canvas px/frame
-  const pxSpeed = sv * SCALE / 60;
+  // Convert physics speed (m/s) to pixels per second
+  const pxSpeedPerSec = sv * SCALE;
 
   projectile = {
-    x:  cannon.x + cannon.w + 10,
+    x:  cannon.x + cannon.w,
     y:  cannon.y + cannon.h / 2,
-    vx: Math.cos(angle) * pxSpeed,
-    vy: -Math.sin(angle) * pxSpeed,
+    vx: Math.cos(angle) * pxSpeedPerSec,
+    vy: -Math.sin(angle) * pxSpeedPerSec,
     t:  0,
     trail: [],
     slowFactor: SLOW_MO,
@@ -365,7 +396,7 @@ function update(dt) {
     player.squash = 0.6; // jump stretch
   }
 
-  player.vy += GRAVITY;
+  player.vy += GRAVITY_PLAYER;
   player.x  += player.vx;
   player.y  += player.vy;
 
@@ -428,21 +459,22 @@ function update(dt) {
 
   // Projectile update (slow-mo)
   if (projectile) {
-    const sf = projectile.slowFactor;
-    const steps = 3; // sub-steps for accuracy
-    for (let s=0; s<steps; s++) {
-      projectile.vx += 0;                    // no air resistance for now
-      projectile.vy += GRAVITY * sf / steps;
-      projectile.x  += projectile.vx * sf / steps;
-      projectile.y  += projectile.vy * sf / steps;
-      projectile.t  += dt * sf / (steps * 1000);
+    // Precise integration using dt (seconds)
+    const dtS = (dt / 1000) * projectile.slowFactor;
+    
+    // Sub-stepping for collision accuracy
+    const steps = 3;
+    const sDt = dtS / steps;
+    for (let i = 0; i < steps; i++) {
+      projectile.vy += (G_PHYSICS * SCALE) * sDt;
+      projectile.x  += projectile.vx * sDt;
+      projectile.y  += projectile.vy * sDt;
+      
+      // Basic trail point every few steps
+      if (i === 0 && Math.random() > 0.5) projectile.trail.push({x: projectile.x, y: projectile.y});
     }
 
-    // Store trail
-    projectile.trail.push({ x: projectile.x, y: projectile.y });
-    if (projectile.trail.length > 80) projectile.trail.shift();
-
-
+    if (projectile.trail.length > 30) projectile.trail.shift();
 
     // Hit ground – shot vanishes instantly, player can shoot again
     if (projectile.y > gY) {
@@ -483,10 +515,7 @@ function update(dt) {
   // Global FX update
   if (shake > 0) shake *= 0.9;
   if (muzzleFlash > 0) muzzleFlash -= 0.1;
-  clouds.forEach(c => {
-    c.x += c.s;
-    if (c.x - c.r > canvas.width) c.x = -c.r * 2;
-  });
+  
   hitEffects.forEach(h => h.life -= 0.02);
   hitEffects = hitEffects.filter(h => h.life > 0);
 
@@ -507,22 +536,8 @@ function draw() {
   const W = canvas.width, H = canvas.height;
   const gY = GROUND_Y();
 
-  // 1. Static Background (Sky + Sun - NO SHAKE)
-  // Pixel sky – flat colour (matches tile game palette)
-  ctx.fillStyle = '#5c94fc';
-  ctx.fillRect(0, HUD_H, W, H - HUD_H);
-
-  // Sun
-  const sunX = W * 0.75, sunY = HUD_H + 70;
-  const sunGlow = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 90);
-  sunGlow.addColorStop(0,   'rgba(255,240,100,0.55)');
-  sunGlow.addColorStop(0.4, 'rgba(255,220,50,0.2)');
-  sunGlow.addColorStop(1,   'rgba(255,220,50,0)');
-  ctx.beginPath(); ctx.arc(sunX, sunY, 90, 0, Math.PI*2);
-  ctx.fillStyle = sunGlow; ctx.fill();
-  ctx.beginPath(); ctx.arc(sunX, sunY, 38, 0, Math.PI*2);
-  ctx.fillStyle = '#ffe066'; ctx.fill();
-  ctx.strokeStyle = '#ffd600'; ctx.lineWidth = 2; ctx.stroke();
+  // 1. Static Background (Sky Image - NO SHAKE)
+  ctx.drawImage(skyImg, 0, HUD_H, W, H - HUD_H);
 
   // 2. World Space (Shaken)
   ctx.save();
@@ -530,8 +545,6 @@ function draw() {
     ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake);
   }
 
-  // Fluffy clouds
-  drawClouds(W, HUD_H);
 
   // Distant mountains
   drawMountains(W, gY);
@@ -779,54 +792,20 @@ function drawDistanceLabels(gY) {
 
 function drawCannon() {
   const gY = GROUND_Y();
-  cannon.y = gY - cannon.h;
+  // Significant sink to account for the sprite's empty bottom padding
+  cannon.y = gY - cannon.h + 25; 
 
-  // Wheel
-  ctx.fillStyle = '#5a3a1a';
-  ctx.beginPath();
-  ctx.arc(cannon.x + 20, cannon.y + cannon.h + 8, 18, 0, Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle = '#8a6a3a';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-
-  // Spokes
-  for (let i=0;i<6;i++){
-    const a = i/6*Math.PI*2;
-    ctx.strokeStyle='#7a5a2a';ctx.lineWidth=2;
-    ctx.beginPath();
-    ctx.moveTo(cannon.x+20,cannon.y+cannon.h+8);
-    ctx.lineTo(cannon.x+20+Math.cos(a)*16,cannon.y+cannon.h+8+Math.sin(a)*16);
-    ctx.stroke();
-  }
-
-  // Body
-  ctx.fillStyle = '#4a3a28';
-  ctx.beginPath();
-  ctx.roundRect(cannon.x, cannon.y, cannon.w - 10, cannon.h, 6);
-  ctx.fill();
-  ctx.strokeStyle='#6a5a38';ctx.lineWidth=1.5;ctx.stroke();
-
-  // Barrel
-  const bCx = cannon.x + cannon.w - 10;
-  const bCy = cannon.y + cannon.h/2;
-  const ang  = -cannon.angle * Math.PI/180;
-  const bLen = 50;
+  const bCx = cannon.x + cannon.w - 30; // Shifted left to match barrel base
+  const bCy = cannon.y + cannon.h/2 - 10; // Shifted up to match barrel height
+  const ang = -cannon.angle * Math.PI/180;
+  const bLen = 65; // Longer barrel for the larger image
 
   ctx.save();
-  ctx.translate(bCx, bCy);
-  ctx.rotate(ang);
-  ctx.fillStyle = '#2a2018';
-  ctx.beginPath();
-  ctx.roundRect(0, -9, bLen, 18, 4);
-  ctx.fill();
-  ctx.strokeStyle='#5a4a28';ctx.lineWidth=1.5;ctx.stroke();
-
-  // Angle indicator
-  ctx.strokeStyle='rgba(160,140,255,0.5)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(bLen+10,0);ctx.stroke();
-  ctx.setLineDash([]);
-
+  ctx.translate(cannon.x + cannon.w/2, cannon.y + cannon.h/2);
+  // Mirror to face right (towards enemies)
+  ctx.scale(-1, 1);
+  // Draw the cannon image
+  ctx.drawImage(cannonImg, -cannon.w/2, -cannon.h/2, cannon.w, cannon.h);
   ctx.restore();
 
   // Muzzle flash
@@ -864,12 +843,14 @@ function drawPredictedPath() {
   let px = projectile.x, py = projectile.y;
   let pvx = projectile.vx, pvy = projectile.vy;
   ctx.moveTo(px, py);
-  for (let i=0; i<200; i++) {
-    pvy += GRAVITY * projectile.slowFactor;
-    px  += pvx * projectile.slowFactor;
-    py  += pvy * projectile.slowFactor;
+  
+  const stepS = (1/60) * projectile.slowFactor; // simulate 60fps steps
+  for (let i=0; i<180; i++) {
+    pvy += (G_PHYSICS * SCALE) * stepS;
+    px  += pvx * stepS;
+    py  += pvy * stepS;
     if (py > gY || px > canvas.width + 50) break;
-    if (i % 3 === 0) ctx.lineTo(px, py);
+    if (i % 4 === 0) ctx.lineTo(px, py);
   }
   ctx.stroke();
   ctx.setLineDash([]);
