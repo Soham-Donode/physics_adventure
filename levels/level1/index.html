@@ -86,17 +86,6 @@ body { background:#5c94fc; font-family:'Press Start 2P',monospace; overflow:hidd
 .dialog-box input[type=number]::-webkit-inner-spin-button,
 .dialog-box input[type=number]::-webkit-outer-spin-button { -webkit-appearance:none; }
 
-.hint-row { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
-.hint-chip {
-  background:#5a8000; border:3px solid #000;
-  box-shadow:2px 2px 0 #1a3000;
-  padding:5px 10px; color:#f8f878;
-  font-family:'Press Start 2P',monospace; font-size:7px;
-  cursor:pointer; letter-spacing:0.5px;
-  transition:transform .1s;
-}
-.hint-chip:hover { transform:translate(-1px,-1px); box-shadow:3px 3px 0 #1a3000; }
-.hint-chip:active { transform:translate(1px,1px); box-shadow:1px 1px 0 #1a3000; }
 
 .btn-row { display:flex; gap:10px; margin-top:4px; }
 .btn-shoot {
@@ -184,12 +173,6 @@ body { background:#5c94fc; font-family:'Press Start 2P',monospace; overflow:hidd
     <input type="number" id="angleInput" min="0" max="90" value="45" placeholder="e.g. 45">
     <label>Launch Speed v (10–150 m/s)</label>
     <input type="number" id="speedInput" min="10" max="150" value="60" placeholder="e.g. 60">
-    <div class="hint-row">
-      <span class="hint-chip" onclick="fillHint(30,80)">30° / 80</span>
-      <span class="hint-chip" onclick="fillHint(45,70)">45° / 70</span>
-      <span class="hint-chip" onclick="fillHint(60,65)">60° / 65</span>
-      <span class="hint-chip" onclick="fillHint(25,100)">25° / 100</span>
-    </div>
     <div class="btn-row">
       <button class="btn-cancel" onclick="closeDialog()">Cancel</button>
       <button class="btn-shoot" onclick="shootCannon()">🔥 FIRE!</button>
@@ -233,6 +216,8 @@ let hitEffects = []; // {x, y, text, life}
 let clouds = [];
 const cloudImg = new Image();
 cloudImg.src = '../../assets/cloud.png';
+const villianImg = new Image();
+villianImg.src = '../../assets/villian.png';
 
 function makeClouds(W) {
   clouds = Array.from({length: 6}, () => ({
@@ -265,7 +250,7 @@ let projectile = null;
 let enemies = [];
 function makeEnemies() {
   const gY   = GROUND_Y();
-  const EW   = 40, EH = 44;
+  const EW   = 52, EH = 58;
   // cannon right-edge (startX of ruler) + 90 m in pixels = middle enemy centre
   const midCx = (cannon.x + cannon.w) + 90 * SCALE;  // = 200 + 1080 = 1280
   const midX  = midCx - EW / 2;                       // enemy.x so centre = midCx
@@ -331,10 +316,6 @@ function openDialog() {
 }
 function closeDialog() {
   document.getElementById('cannonDialog').classList.remove('show');
-}
-function fillHint(a, s) {
-  document.getElementById('angleInput').value = a;
-  document.getElementById('speedInput').value = s;
 }
 function shootCannon() {
   const angleDeg = parseFloat(document.getElementById('angleInput').value);
@@ -898,47 +879,12 @@ function drawEnemy(e) {
   const bob = Math.sin(e.wobble) * 3;
   const ex = e.x, ey = e.y + bob;
 
-  // Body (pig-like, Angry Birds style)
-  ctx.fillStyle = '#3ab83a';
-  ctx.beginPath();
-  ctx.arc(ex + e.w/2, ey + e.h/2, e.w/2, 0, Math.PI*2);
-  ctx.fill();
-  ctx.strokeStyle = '#2a8a2a';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Helmet
-  ctx.fillStyle = '#888';
-  ctx.beginPath();
-  ctx.ellipse(ex+e.w/2, ey+e.h/2-8, e.w/2, e.h*0.3, 0, Math.PI, 0);
-  ctx.fill();
-  ctx.strokeStyle='#666';ctx.lineWidth=1;ctx.stroke();
-
-  // Eyes
-  ctx.fillStyle='#fff';
-  ctx.beginPath();ctx.arc(ex+e.w/2-6,ey+e.h/2-2,6,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(ex+e.w/2+6,ey+e.h/2-2,6,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#111';
-  ctx.beginPath();ctx.arc(ex+e.w/2-5,ey+e.h/2-2,3,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(ex+e.w/2+7,ey+e.h/2-2,3,0,Math.PI*2);ctx.fill();
-
-  // Angry eyebrows
-  ctx.strokeStyle='#111';ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(ex+e.w/2-10,ey+e.h/2-9);ctx.lineTo(ex+e.w/2-2,ey+e.h/2-7);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(ex+e.w/2+10,ey+e.h/2-9);ctx.lineTo(ex+e.w/2+2,ey+e.h/2-7);ctx.stroke();
-
-  // Snout
-  ctx.fillStyle='#5acc5a';
-  ctx.beginPath();ctx.ellipse(ex+e.w/2,ey+e.h/2+4,6,4,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#3a9a3a';
-  ctx.beginPath();ctx.arc(ex+e.w/2-2,ey+e.h/2+4,1.5,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.arc(ex+e.w/2+2,ey+e.h/2+4,1.5,0,Math.PI*2);ctx.fill();
-
-  // Hitbox (subtle glow)
-  ctx.strokeStyle='rgba(255,80,80,0.3)';ctx.lineWidth=1;
-  ctx.setLineDash([3,3]);
-  ctx.strokeRect(ex, ey, e.w, e.h);
-  ctx.setLineDash([]);
+  ctx.save();
+  // Flip image to face left (towards hero)
+  ctx.translate(ex + e.w/2, ey + e.h/2);
+  ctx.scale(-1, 1);
+  ctx.drawImage(villianImg, -e.w/2, -e.h/2, e.w, e.h);
+  ctx.restore();
 }
 
 function drawPlayer() {
