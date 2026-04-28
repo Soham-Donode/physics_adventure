@@ -54,6 +54,7 @@ function showLose() {
   document.getElementById('overlayTitle').className = 'lose-text';
   document.getElementById('overlayMsg').textContent = 'You need to tilt the shield to perfectly block the relative velocity vector!';
   document.getElementById('retryBtn').style.display = 'inline-block';
+  document.getElementById('nextLevelBtn').style.display = 'none';
   document.getElementById('overlay').classList.add('show');
 }
 
@@ -63,6 +64,7 @@ function showWin() {
   document.getElementById('overlayTitle').className = 'win-text';
   document.getElementById('overlayMsg').textContent = 'You survived the arrow rain by mastering relative velocity!';
   document.getElementById('retryBtn').style.display = 'none';
+  document.getElementById('nextLevelBtn').style.display = 'inline-block';
   document.getElementById('overlay').classList.add('show');
 }
 

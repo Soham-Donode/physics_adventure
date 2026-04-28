@@ -1,39 +1,250 @@
-<!DOCTYPE html>
+`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhysicsQuest – Level 5: Wave Resonance</title>
+<title>PhysicsQuest – Level 5: Light Reflector</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  background:#1a1a2e;
-  font-family:'Press Start 2P', monospace;
-  display:flex; align-items:center; justify-content:center;
-  min-height:100vh; flex-direction:column; text-align:center;
-  padding:40px;
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; image-rendering:pixelated; }
+body { background:#000; font-family:'Press Start 2P',monospace; overflow:hidden; user-select:none; }
+
+#viewport {
+  position: absolute;
+  width: 1200px;
+  height: 900px;
+  background: #0a0a1a;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+  border: 4px solid #333;
+  transform-origin: 0 0;
 }
-h1 { color:#f8f878; font-size:20px; text-shadow:3px 3px 0 #600000; margin-bottom:20px; }
-p  { color:#a8d8f8; font-size:8px; line-height:2.5; margin-bottom:30px; }
-.back-btn {
-  display:inline-block;
-  padding:14px 28px;
-  background:#3c5aa6; border:4px solid #000;
-  box-shadow:4px 4px 0 #1a2a6c;
-  color:#f8f878; font-family:'Press Start 2P',monospace;
-  font-size:9px; cursor:pointer; text-decoration:none;
-  transition:transform .15s;
+
+#gameCanvas { display:block; width:100%; height:100%; }
+
+/* ── HUD ────────────────────────────────────── */
+#hud {
+  position:fixed; top:0; left:0; right:0;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 16px;
+  background:#3c5aa6;
+  border-bottom:4px solid #1a2a6c;
+  z-index:10; pointer-events:none;
 }
-.back-btn:hover { transform:translate(-2px,-2px); box-shadow:6px 6px 0 #1a2a6c; }
-.back-btn:active { transform:translate(2px,2px); box-shadow:2px 2px 0 #1a2a6c; }
-.icon { font-size:48px; margin-bottom:20px; display:block; }
+#hud .title { color:#f8f878; font-size:9px; letter-spacing:1px; text-shadow:2px 2px #1a2a6c; }
+#hud .info  { color:#f8f878; font-size:9px; text-shadow:2px 2px #1a2a6c; }
+#hud .keys  { color:#a8d8f8; font-size:7px; }
+
+/* ── Inventory & Side Panel ─────────────────── */
+#inventoryContainer {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  bottom: 0;
+  width: 240px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+#panelTrigger {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 60px;
+  height: 60px;
+  background: rgba(60, 60, 100, 0.9);
+  border: 4px solid #f8f878;
+  box-shadow: 4px 4px 0 #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.1s;
+}
+#panelTrigger:hover { transform: scale(1.1); background: rgba(80, 80, 140, 1); }
+#panelTrigger img { width: 40px; height: 40px; }
+
+#sidePanel {
+  position: absolute;
+  top: 0;
+  right: -240px; /* Hidden by default */
+  width: 220px;
+  bottom: 0;
+  background: rgba(20, 20, 40, 0.95);
+  border-left: 4px solid #1a2a6c;
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  color: #fff;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+}
+
+/* Show panel when container is hovered */
+#inventoryContainer:hover #sidePanel {
+  right: 0;
+}
+
+#sidePanel h3 { font-size: 10px; color: #f8f878; margin-bottom: 10px; text-align: center; text-shadow: 2px 2px #000; }
+.inventory-slot {
+  width: 100%;
+  padding: 20px 10px;
+  background: #2a2a4e;
+  border: 4px solid #000;
+  box-shadow: inset 3px 3px 0 #1a1a2e, 4px 4px 0 #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.inventory-slot:hover { background: #3a3a6e; transform: translate(-2px, -2px); box-shadow: inset 3px 3px 0 #1a1a2e, 6px 6px 0 #000; }
+.inventory-slot .icon { width: 48px; height: 48px; margin-bottom: 10px; }
+.inventory-slot .count { font-size: 8px; color: #f8f878; text-shadow: 1px 1px #000; }
+
+.goal-info { font-size: 7px; color: #a8d8f8; line-height: 2.2; margin-top: auto; text-align: center; border-top: 2px solid #333; padding-top: 20px; }
+
+/* ── Mirror Control Panel ─────────────────────── */
+#mirrorControl {
+  display: none;
+  position: absolute;
+  background: #2a2a4e;
+  border: 4px solid #f8f878;
+  box-shadow: 6px 6px 0 #000;
+  padding: 15px;
+  z-index: 200;
+  color: #fff;
+  width: 180px;
+  image-rendering: auto;
+}
+#mirrorControl h4 { font-size: 8px; color: #f8f878; margin-bottom: 12px; text-align: center; }
+#mirrorControl input {
+  width: 100%;
+  background: #000;
+  border: 2px solid #f8f878;
+  color: #fff;
+  padding: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  text-align: center;
+  margin-bottom: 12px;
+  outline: none;
+}
+.control-btns { display: flex; gap: 8px; margin-bottom: 12px; }
+.control-btns button {
+  flex: 1;
+  padding: 8px;
+  background: #3c5aa6;
+  border: 2px solid #000;
+  color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  cursor: pointer;
+}
+.control-btns button:hover { background: #4c6ab6; }
+.close-btn {
+  width: 100%;
+  padding: 10px;
+  background: #c82000;
+  border: 2px solid #000;
+  color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  cursor: pointer;
+}
+.close-btn:hover { background: #e83000; }
+
+/* ── Overlay ────────────────────────────────── */
+#overlay {
+  position:absolute; inset:0;
+  background:rgba(0,0,0,0.9);
+  z-index:100; display:flex; align-items:center; justify-content:center;
+  flex-direction:column; text-align:center;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.8s ease;
+}
+#overlay.show { opacity:1; pointer-events:auto; }
+#overlay h1 {
+  font-size:24px; margin-bottom:14px;
+  text-shadow:4px 4px #000;
+}
+#overlay p  { font-size:9px; color:#ccc; margin-bottom:28px; line-height:2; }
+#overlay button {
+  padding:14px 32px;
+  background:#c82000; border:4px solid #000;
+  box-shadow:4px 4px 0 #600000;
+  color:#fff; font-family:'Press Start 2P',monospace;
+  font-size:10px; cursor:pointer;
+  margin: 10px;
+}
+#overlay button:hover { box-shadow:6px 6px 0 #600000; transform:translate(-2px,-2px); }
+.win-text  { color:#50f878; }
+
 </style>
 </head>
 <body>
-  <span class="icon">🌊</span>
-  <h1>Level 5: Wave Resonance</h1>
-  <p>Match frequencies &amp; amplitudes to break barriers.<br>This level is coming soon!</p>
-  <a class="back-btn" href="../../index.html">🏠 Back to Menu</a>
+
+<div id="viewport">
+  <div id="hud">
+    <span class="title">⚡ PhysicsQuest — Level 5: Light Reflector</span>
+    <span class="info" id="enemyCount">Enemies: 8</span>
+    <span class="keys">Hover Top-Right for Inventory | Drag to Move | Click to Rotate</span>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="inventoryContainer">
+    <!-- Hover Trigger Icon -->
+    <div id="panelTrigger">
+      <img src="../../assets/mirror_v2.png" alt="Inventory">
+    </div>
+
+    <!-- Hidden Side Panel -->
+    <div id="sidePanel">
+      <h3>INVENTORY</h3>
+      <div class="inventory-slot" id="mirrorSlot" onclick="takeMirror()">
+        <img src="../../assets/mirror_v2.png" class="icon" alt="Mirror">
+        <span class="count">Unlimited Mirrors</span>
+      </div>
+      <div class="goal-info">
+        Reflect the light beam to eliminate all villains.<br><br>
+        [Left Click] Place Mirror<br>
+        [Drag Mirror] Reposition<br>
+        [Click Mirror] Rotation Panel<br>
+        [Right Click] Remove Mirror
+      </div>
+    </div>
+  </div>
+
+  <!-- Mirror Control Panel -->
+  <div id="mirrorControl">
+    <h4>MIRROR CONTROL</h4>
+    <label style="font-size:6px; color:#a8d8f8; display:block; margin-bottom:5px;">ANGLE (0-360°)</label>
+    <input type="number" id="angleInput" value="45" min="0" max="360" onchange="updateMirrorAngle()">
+    <div class="control-btns">
+      <button onclick="adjustAngle(-15)">-15°</button>
+      <button onclick="adjustAngle(15)">+15°</button>
+    </div>
+    <button class="close-btn" onclick="closeControl()">CLOSE</button>
+  </div>
+
+  <!-- Win/lose overlay -->
+  <div id="overlay">
+    <h1 id="overlayTitle"></h1>
+    <p  id="overlayMsg"></p>
+    <button onclick="restartGame()">RETRY</button>
+    <button onclick="window.location.href='../../index.html'" style="background:#3c5aa6;box-shadow:4px 4px 0 #1a2a6c;">🏠 MENU</button>
+  </div>
+</div>
+
+<script src="../../js/audio.js"></script>
+<script src="../../js/graphics.js"></script>
+<script src="../../js/Player.js"></script>
+<script src="movement.js"></script>
+<script src="game.js"></script>
 </body>
 </html>
