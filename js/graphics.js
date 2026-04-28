@@ -5,23 +5,52 @@ const style = document.createElement('style');
 style.textContent = `
   #fadeOverlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #0a0a0a; z-index: 9999;
-    pointer-events: none; opacity: 0;
-    transition: opacity 0.8s ease-in-out;
+    z-index: 9999; pointer-events: none;
+    display: flex; align-items: center; justify-content: center;
   }
-  #fadeOverlay.active { opacity: 1; pointer-events: all; }
+  .fade-layer {
+    position: absolute; width: 100%; height: 50%;
+    background: #0a0a0a; transition: transform 0.6s cubic-bezier(0.77, 0, 0.175, 1);
+  }
+  .fade-top { top: 0; transform: translateY(-100%); }
+  .fade-bottom { bottom: 0; transform: translateY(100%); }
+  
+  #fadeOverlay.active .fade-top { transform: translateY(0); }
+  #fadeOverlay.active .fade-bottom { transform: translateY(0); }
+  #fadeOverlay.active { pointer-events: all; }
+
+  #loaderText {
+    color: #f8f878; font-family: 'Press Start 2P', monospace; font-size: 14px;
+    z-index: 10000; opacity: 0; transition: opacity 0.3s;
+    text-shadow: 2px 2px 0 #000;
+  }
+  #fadeOverlay.active #loaderText { opacity: 1; }
+
+  /* Tactile UI Effects */
+  button, .level-card, .btn {
+    transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.2s !important;
+    cursor: pointer;
+  }
+  button:hover, .level-card:hover { transform: scale(1.03); filter: brightness(1.1); }
+  button:active, .level-card:active { transform: scale(0.95); }
 `;
 document.head.appendChild(style);
 
 const fadeEl = document.createElement('div');
 fadeEl.id = 'fadeOverlay';
+fadeEl.innerHTML = `
+  <div class="fade-layer fade-top"></div>
+  <div class="fade-layer fade-bottom"></div>
+  <div id="loaderText">LOADING...</div>
+`;
 document.body.appendChild(fadeEl);
 
 function goToLevel(url) {
   fadeEl.classList.add('active');
+  if (window.sounds) window.sounds.click();
   setTimeout(() => {
     window.location.href = url;
-  }, 800);
+  }, 700);
 }
 
 // Fade in on load
@@ -29,7 +58,7 @@ window.addEventListener('load', () => {
   fadeEl.classList.add('active');
   setTimeout(() => {
     fadeEl.classList.remove('active');
-  }, 100);
+  }, 200);
 });
 
 const assets = {

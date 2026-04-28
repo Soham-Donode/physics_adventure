@@ -147,5 +147,5 @@ draw();
 window.addEventListener('load', () => {
   setTimeout(() => {
     document.getElementById('loadingScreen').classList.add('hide');
-  }, 3000);
+  }, 1000);
 });
