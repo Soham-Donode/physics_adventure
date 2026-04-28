@@ -67,6 +67,7 @@ const assets = {
   run: new Image(),
   face: new Image(),
   mountains: new Image(),
+  cloud: new Image(),
   grass: new Image(),
   dirt: new Image(),
   stone: new Image()
@@ -78,6 +79,7 @@ function initSharedAssets(basePath) {
   assets.run.src = basePath + 'assets/character/running/_Run.png';
   assets.face.src = basePath + 'assets/face.png';
   assets.mountains.src = basePath + 'assets/background/mountains.png';
+  assets.cloud.src = basePath + 'assets/cloud.png';
   assets.grass.src = basePath + 'assets/grass/green.png';
   assets.dirt.src = basePath + 'assets/grass/brown.png';
   assets.stone.src = basePath + 'assets/grass/stone.png';

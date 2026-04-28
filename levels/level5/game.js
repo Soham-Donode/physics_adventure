@@ -10,6 +10,7 @@ resizeCanvas(canvas, vp);
 
 // ─── Assets ───────────────────────────────────────────────────────────────
 const skyImg = assets.sky;
+const mountainsImg = assets.mountains;
 const villianImg = new Image(); villianImg.src = '../../assets/villian.png';
 const mirrorImg = new Image(); mirrorImg.src = '../../assets/mirror_v2.png';
 const heroImg = assets.idle;
@@ -106,20 +107,25 @@ function getPos(e) {
   };
 }
 
-function takeMirror() {
+function takeMirror(e) {
+  e.stopPropagation();
   if (!heldMirror) {
-    heldMirror = { x: 0, y: 0, angle: 45 };
+    mouseDownPos = { x: e.clientX, y: e.clientY };
+    const p = getPos(e);
+    heldMirror = { x: p.x, y: p.y, angle: 45 };
     closeControl();
+    // Hide the UI mirror to make it look like it was "picked up"
+    document.getElementById('uiMirrorImg').style.visibility = 'hidden';
   }
 }
 
 canvas.addEventListener('mousedown', e => {
   if (state !== 'playing') return;
-  
+
   if (window.bgMusic && window.bgMusic.paused) {
-    window.bgMusic.play().catch(() => {});
+    window.bgMusic.play().catch(() => { });
   }
-  
+
   const p = getPos(e);
   mouseDownPos = { x: e.clientX, y: e.clientY };
 
@@ -132,15 +138,8 @@ canvas.addEventListener('mousedown', e => {
     return;
   }
 
-  if (heldMirror) {
-    heldMirror.x = p.x; heldMirror.y = p.y;
-    mirrors.push(heldMirror);
-    heldMirror = null;
-    if (window.sounds) window.sounds.click();
-    return;
-  }
-
-  const mirror = mirrors.find(m => Math.hypot(m.x - p.x, m.y - p.y) < 30);
+  // Find mirror (search in reverse to get the topmost one)
+  const mirror = mirrors.slice().reverse().find(m => Math.hypot(m.x - p.x, m.y - p.y) < 30);
   if (mirror) {
     if (window.sounds) window.sounds.click();
     draggingMirror = mirror;
@@ -168,9 +167,42 @@ window.addEventListener('mouseup', e => {
     }
     draggingMirror = null;
   }
+
+  if (heldMirror) {
+    const p = getPos(e);
+    // Don't place if we are still very close to the inventory button and it was just a quick click
+    const distFromStart = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
+    
+    // If it was a drag (dist > 10) or we are far from the UI button (p.x < 1000)
+    if (p.x < 1100 || p.y > 100) {
+       heldMirror.x = p.x; heldMirror.y = p.y;
+       mirrors.push(heldMirror);
+       if (window.sounds) window.sounds.click();
+    }
+    heldMirror = null;
+    // Show the UI mirror again
+    document.getElementById('uiMirrorImg').style.visibility = 'visible';
+  }
 });
 
 canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+window.addEventListener('keydown', e => {
+  if (state !== 'playing' || !selectedMirror) return;
+
+  const isDelete = e.key === 'Delete' || e.key === 'Del';
+  const isCtrlD = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd';
+
+  if (isDelete || isCtrlD) {
+    e.preventDefault();
+    const idx = mirrors.indexOf(selectedMirror);
+    if (idx !== -1) {
+      mirrors.splice(idx, 1);
+      closeControl();
+      if (window.sounds) window.sounds.click();
+    }
+  }
+});
 
 // ─── Mirror Control Logic ─────────────────────────────────────────────────
 function openControl() {
@@ -254,7 +286,14 @@ function draw() {
     ctx.drawImage(skyImg, 0, 0, canvas.width, canvas.height);
   }
 
-  ctx.fillStyle = 'rgba(10, 10, 30, 0.7)';
+  // Draw Mountains at the bottom
+  if (mountainsImg.complete) {
+    // Parallax mountains at the bottom
+    ctx.drawImage(mountainsImg, 0, 600, 1200, 300);
+  }
+
+  // Dark overlay (reduced opacity to make it look like the image but keep beam visible)
+  ctx.fillStyle = 'rgba(10, 10, 30, 0.4)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#1e1e2e';
   ctx.strokeStyle = '#33334d';
@@ -268,7 +307,7 @@ function draw() {
     ctx.stroke();
     ctx.shadowBlur = 0; ctx.strokeStyle = BEAM_CORE; ctx.lineWidth = 2; ctx.stroke();
   }
-  
+
   drawProtagonistWithGun();
   enemies.forEach(e => {
     if (!e.alive) return;
@@ -323,11 +362,11 @@ function drawProtagonistWithGun() {
   const gunOrigin = getGunOrigin();
   ctx.translate(gunOrigin.x, gunOrigin.y);
   ctx.rotate(lightSource.angle);
-  
+
   if (wandImg.complete) {
     ctx.drawImage(wandImg, 0, -8, 80, 16);
   }
-  
+
   ctx.restore();
 }
 

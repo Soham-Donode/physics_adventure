@@ -37,76 +37,33 @@ body { background:#000; font-family:'Press Start 2P',monospace; overflow:hidden;
 #hud .info  { color:#f8f878; font-size:9px; text-shadow:2px 2px #1a2a6c; }
 #hud .keys  { color:#a8d8f8; font-size:7px; }
 
-/* ── Inventory & Side Panel ─────────────────── */
 #inventoryContainer {
   position: absolute;
-  top: 50px;
-  right: 0;
-  bottom: 0;
-  width: 240px;
-  z-index: 50;
-  pointer-events: none;
+  top: 60px;
+  right: 25px;
+  z-index: 100;
+  pointer-events: auto;
 }
 
 #panelTrigger {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  width: 60px;
-  height: 60px;
+  position: relative;
+  width: 70px;
+  height: 70px;
   background: rgba(60, 60, 100, 0.9);
   border: 4px solid #f8f878;
   box-shadow: 4px 4px 0 #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  cursor: grab;
   pointer-events: auto;
   transition: transform 0.1s;
 }
+#panelTrigger:active { cursor: grabbing; transform: scale(0.9); }
 #panelTrigger:hover { transform: scale(1.1); background: rgba(80, 80, 140, 1); }
-#panelTrigger img { width: 40px; height: 40px; }
+#panelTrigger img { width: 50px; height: 50px; }
 
-#sidePanel {
-  position: absolute;
-  top: 0;
-  right: -240px; /* Hidden by default */
-  width: 220px;
-  bottom: 0;
-  background: rgba(20, 20, 40, 0.95);
-  border-left: 4px solid #1a2a6c;
-  padding: 30px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  color: #fff;
-  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: auto;
-}
-
-/* Show panel when container is hovered */
-#inventoryContainer:hover #sidePanel {
-  right: 0;
-}
-
-#sidePanel h3 { font-size: 10px; color: #f8f878; margin-bottom: 10px; text-align: center; text-shadow: 2px 2px #000; }
-.inventory-slot {
-  width: 100%;
-  padding: 20px 10px;
-  background: #2a2a4e;
-  border: 4px solid #000;
-  box-shadow: inset 3px 3px 0 #1a1a2e, 4px 4px 0 #000;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.inventory-slot:hover { background: #3a3a6e; transform: translate(-2px, -2px); box-shadow: inset 3px 3px 0 #1a1a2e, 6px 6px 0 #000; }
-.inventory-slot .icon { width: 48px; height: 48px; margin-bottom: 10px; }
-.inventory-slot .count { font-size: 8px; color: #f8f878; text-shadow: 1px 1px #000; }
-
-.goal-info { font-size: 7px; color: #a8d8f8; line-height: 2.2; margin-top: auto; text-align: center; border-top: 2px solid #333; padding-top: 20px; }
+#sidePanel { display: none; }
 
 /* ── Mirror Control Panel ─────────────────────── */
 #mirrorControl {
@@ -192,31 +149,15 @@ body { background:#000; font-family:'Press Start 2P',monospace; overflow:hidden;
   <div id="hud">
     <span class="title">⚡ PhysicsQuest — Level 5: Light Reflector</span>
     <span class="info" id="enemyCount">Enemies: 8</span>
-    <span class="keys">Hover Top-Right for Inventory | Drag to Move | Click to Rotate</span>
+    <span class="keys">Drag Mirror from Top-Right | Drag to Move | Click to Rotate | Ctrl+D to Delete</span>
   </div>
 
   <canvas id="gameCanvas"></canvas>
 
   <div id="inventoryContainer">
-    <!-- Hover Trigger Icon -->
-    <div id="panelTrigger">
-      <img src="../../assets/mirror_v2.png" alt="Inventory">
-    </div>
-
-    <!-- Hidden Side Panel -->
-    <div id="sidePanel">
-      <h3>INVENTORY</h3>
-      <div class="inventory-slot" id="mirrorSlot" onclick="takeMirror()">
-        <img src="../../assets/mirror_v2.png" class="icon" alt="Mirror">
-        <span class="count">Unlimited Mirrors</span>
-      </div>
-      <div class="goal-info">
-        Reflect the light beam to eliminate all villains.<br><br>
-        [Left Click] Place Mirror<br>
-        [Drag Mirror] Reposition<br>
-        [Click Mirror] Rotation Panel<br>
-        [Right Click] Remove Mirror
-      </div>
+    <div id="panelTrigger" onmousedown="takeMirror(event)">
+      <img src="../../assets/mirror_v2.png" alt="Mirror" id="uiMirrorImg">
+      <div style="position:absolute; bottom:-20px; left:0; width:100%; text-align:center; font-size:6px; color:#f8f878;">MIRROR</div>
     </div>
   </div>
 
