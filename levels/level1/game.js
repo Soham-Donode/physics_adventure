@@ -126,6 +126,7 @@ function shootCannon() {
   closeDialog();
   shake = 8;
   muzzleFlash = 1;
+  if (window.sounds) window.sounds.shoot();
 }
 function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
@@ -171,6 +172,7 @@ function update(dt) {
         spawnParticles(e.x + e.w/2, e.y + e.h/2, '#ff5050', 28);
         spawnParticles(e.x + e.w/2, e.y + e.h/2, '#ffcc00', 16);
         hitEffects.push({x: e.x + e.w/2, y: e.y - 20, text: 'BOOM!', life: 1});
+        if (window.sounds) window.sounds.explode();
         document.getElementById('enemyCount').textContent =
           'Enemies: ' + enemies.filter(x => x.alive).length;
         clearProjectile();
@@ -441,6 +443,7 @@ function showHint(msg) {
 }
 
 function showWin() {
+  if (window.sounds) window.sounds.win();
   state = 'won';
   document.getElementById('overlayTitle').textContent = '🏁 Level 1 Complete!';
   document.getElementById('overlayTitle').className = 'win-text';

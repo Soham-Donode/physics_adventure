@@ -83,6 +83,7 @@ function showToast(msg, isError) {
   t.style.backgroundColor = isError ? '#c82000' : '#389828';
   t.classList.add('show');
   clearTimeout(toastTimeout);
+  if (isError && window.sounds) window.sounds.lose();
   toastTimeout = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
@@ -96,6 +97,7 @@ function checkWinCondition() {
     isAngleCorrect;
 
   if (isCorrect) {
+    if (window.sounds) window.sounds.win();
     showToast('Perfect Transformation!', false);
     state = 'moving';
   } else {

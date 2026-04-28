@@ -71,6 +71,7 @@ function updateMovement(dt, player, state, bresenhamPoints, CELL_SIZE, showWin, 
           player.subStateProgress = 0;
           player.jumpStartX = player.x;
           player.jumpStartY = player.y;
+          if (window.sounds) window.sounds.jump();
         }
       } else if (player.moveSubState === 1) {
         const startX = player.jumpStartX;

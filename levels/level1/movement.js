@@ -13,6 +13,7 @@ function updateMovement(dt, player, state, keys, platforms, GRAVITY_PLAYER, canv
     player.vy = -10;
     player.onGround = false;
     player.squash = 0.6; // jump stretch
+    if (window.sounds) window.sounds.jump();
   }
 
   player.vy += GRAVITY_PLAYER;

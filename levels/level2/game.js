@@ -92,7 +92,7 @@ function checkPixel(gx, gy) {
   if (gx === nextP.x && gy === nextP.y) {
     plottedPixels.push({x: gx, y: gy});
     currentPlotIndex++;
-    
+    if (window.sounds) window.sounds.step();
     document.getElementById('pointInfo').textContent = `Points: ${currentPlotIndex}/${bresenhamPoints.length}`;
 
     if (currentPlotIndex === bresenhamPoints.length) {
@@ -114,10 +114,12 @@ function showToast(msg, isError) {
   t.style.backgroundColor = isError ? '#c82000' : '#389828';
   t.classList.add('show');
   clearTimeout(toastTimeout);
+  if (isError && window.sounds) window.sounds.lose();
   toastTimeout = setTimeout(() => t.classList.remove('show'), 2000);
 }
 
 function showWin() {
+  if (window.sounds) window.sounds.win();
   document.getElementById('overlay').classList.add('show');
 }
 

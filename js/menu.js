@@ -1,7 +1,5 @@
 const canvas = document.getElementById('bgCanvas');
 const ctx = canvas.getContext('2d');
-const mountainImg = new Image();
-mountainImg.src = 'assets/background/mountains.png';
 const grassImg = new Image();
 grassImg.src = 'assets/grass/green.png';
 const dirtImg = new Image();
@@ -117,7 +115,7 @@ function draw() {
   ctx.fillStyle = '#0a0a1a';
   ctx.fill();
 
-  drawBGMountains(W, H);
+  // drawBGMountains(W, H);
 
   for (const f of fireflies) {
     f.x += f.dx;

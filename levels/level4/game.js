@@ -49,6 +49,7 @@ function resetGame() {
 }
 
 function showLose() {
+  if (window.sounds) window.sounds.explode();
   document.getElementById('overlayTitle').textContent = '💥 Hit!';
   document.getElementById('overlayTitle').className = 'lose-text';
   document.getElementById('overlayMsg').textContent = 'You need to tilt the shield to perfectly block the relative velocity vector!';
@@ -57,6 +58,7 @@ function showLose() {
 }
 
 function showWin() {
+  if (window.sounds) window.sounds.win();
   document.getElementById('overlayTitle').textContent = '🏁 Level 4 Complete!';
   document.getElementById('overlayTitle').className = 'win-text';
   document.getElementById('overlayMsg').textContent = 'You survived the arrow rain by mastering relative velocity!';
