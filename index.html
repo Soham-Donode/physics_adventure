@@ -185,9 +185,83 @@ body {
   .level-card { padding:14px 10px; }
   .level-num { font-size:14px; width:36px; height:36px; line-height:30px; }
 }
+
+/* ── Loading Screen ─────────────────────────── */
+#loadingScreen {
+  position: fixed;
+  inset: 0;
+  background: #0a0a1a;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.8s cubic-bezier(0.7, 0, 0.3, 1), opacity 0.8s;
+}
+#loadingScreen.hide {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+.loader-content {
+  text-align: center;
+  animation: loaderBounce 2s infinite ease-in-out;
+}
+.loader-title {
+  font-size: 32px;
+  color: #f8f878;
+  text-shadow: 4px 4px 0 #c86000, 8px 8px 0 #600000;
+  margin-bottom: 20px;
+  letter-spacing: 4px;
+}
+.loader-bar {
+  width: 300px;
+  height: 32px;
+  border: 4px solid #fff;
+  padding: 4px;
+  background: #000;
+  margin: 0 auto;
+}
+.loader-fill {
+  height: 100%;
+  background: #388e3c;
+  width: 0%;
+  box-shadow: inset 0 4px 0 #78d860;
+  animation: progressLoad 2.5s ease-in-out forwards;
+}
+.loader-text {
+  margin-top: 15px;
+  font-size: 8px;
+  color: #a8d8f8;
+  animation: blink 0.8s infinite;
+}
+
+@keyframes progressLoad {
+  0% { width: 0%; }
+  20% { width: 15%; }
+  50% { width: 60%; }
+  100% { width: 100%; }
+}
+@keyframes loaderBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
 </style>
 </head>
 <body>
+
+<div id="loadingScreen">
+  <div class="loader-content">
+    <h1 class="loader-title">PHYSICS QUEST</h1>
+    <div class="loader-bar">
+      <div class="loader-fill"></div>
+    </div>
+    <p class="loader-text">INITIALIZING ENGINE...</p>
+  </div>
+</div>
 
 <canvas id="bgCanvas"></canvas>
 
@@ -406,6 +480,13 @@ function draw() {
 }
 
 draw();
+
+// Hide loading screen after 3s
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('loadingScreen').classList.add('hide');
+  }, 3000);
+});
 </script>
 </body>
 </html>

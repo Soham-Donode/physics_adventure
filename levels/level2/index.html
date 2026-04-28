@@ -18,8 +18,8 @@ body { background:#000; font-family:'Press Start 2P',monospace; overflow:hidden;
   height: 900px;
   background: #5c94fc;
   overflow: hidden;
-  box-shadow: 0 0 50px rgba(0,0,0,0.8);
-  border: 4px solid #333;
+  border: 8px solid #000;
+  box-shadow: 0 0 0 4px #4a4a4a, 0 20px 80px rgba(0,0,0,0.8);
   transform-origin: 0 0;
 }
 
@@ -331,7 +331,9 @@ function update(dt) {
       player.facing = player.vx > 0 ? 1 : -1;
     }
 
-    // Walking animation
+  }
+
+  // Animation runs always (idle or moving)
   player.frameTimer += dt;
   if (player.frameTimer > 80) {
     player.frame = (player.frame + 1) % 10;
@@ -452,7 +454,7 @@ function drawPlatform() {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
   ctx.lineWidth = 1;
 
   for (let x=0; x<=COLS; x++) {
