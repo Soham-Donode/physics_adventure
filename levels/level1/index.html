@@ -254,8 +254,10 @@ const villianImg = new Image();
 villianImg.src = '../../assets/villian.png';
 const cannonImg = new Image();
 cannonImg.src = '../../assets/cannon.png';
-const faceImg = new Image();
-faceImg.src = '../../assets/face.png';
+const idleImg = new Image();
+idleImg.src = '../../assets/character/standing/_Idle.png';
+const runImg = new Image();
+runImg.src = '../../assets/character/running/_Run.png';
 
 function makeClouds(W) {
   // Clouds removed as per request
@@ -449,11 +451,10 @@ function update(dt) {
   }
 
   // Walk animation
-  if (Math.abs(player.vx) > 0.5) {
-    player.frameTimer += dt;
-    if (player.frameTimer > 120) { player.frame = (player.frame + 1) % 4; player.frameTimer = 0; }
-  } else {
-    player.frame = 0;
+  player.frameTimer += dt;
+  if (player.frameTimer > 80) {
+    player.frame = (player.frame + 1) % 10;
+    player.frameTimer = 0;
   }
 
   // Enemy wobble
@@ -876,66 +877,18 @@ function drawPlayer() {
   const f = player.facing;
   const running = Math.abs(player.vx) > 0.5;
   const frame = player.frame;
-  const sq = player.squash || 1;
+  const img = running ? runImg : idleImg;
 
   ctx.save();
   ctx.translate(px + w/2, py + h);
-  ctx.scale(f / sq, sq);
+  ctx.scale(f, 1);
   ctx.translate(0, -h);
 
-  // Legs animation
-  const legSwing = running ? Math.sin(frame/4 * Math.PI * 2) * 8 : 0;
-
-  // Legs (Suit Pants)
-  ctx.fillStyle = '#222';
-  ctx.beginPath();
-  ctx.roundRect(-6, h*0.55, 10, h*0.45 - legSwing*0.3, 3);
-  ctx.fill();
-  ctx.fillStyle = '#1a1a1a';
-  ctx.beginPath();
-  ctx.roundRect(2, h*0.55, 10, h*0.45 + legSwing*0.3, 3);
-  ctx.fill();
-
-  // Shoes
-  ctx.fillStyle = '#000';
-  ctx.beginPath();ctx.roundRect(-8, h-10+legSwing*0.1, 14, 8, 3);ctx.fill();
-  ctx.beginPath();ctx.roundRect(0,  h-10-legSwing*0.1, 14, 8, 3);ctx.fill();
-
-  // Body (Suit Jacket)
-  ctx.fillStyle = '#111';
-  ctx.beginPath();ctx.roundRect(-10, h*0.25, 20, h*0.38, 3);ctx.fill();
-  
-  // Lapels
-  ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(-3, h*0.25); ctx.lineTo(-9, h*0.45); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(3, h*0.25); ctx.lineTo(9, h*0.45); ctx.stroke();
-
-  // Shirt & Tie
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.moveTo(-4, h*0.25); ctx.lineTo(4, h*0.25); ctx.lineTo(0, h*0.42); ctx.fill();
-  
-  // Tie (with a slight knot detail)
-  ctx.fillStyle = '#c00'; 
-  ctx.fillRect(-1.5, h*0.25, 3, 3); // knot
-  ctx.fillRect(-1, h*0.28, 2, 8);  // tail
-  
-  // Pocket square
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(4, h*0.34, 4, 1.5);
-
-  // Buttons
-  ctx.fillStyle = '#333';
-  ctx.beginPath(); ctx.arc(0, h*0.48, 1.2, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(0, h*0.54, 1.2, 0, Math.PI*2); ctx.fill();
-
-  // Arms (Sleeves)
-  const armSwing = running ? Math.cos(frame/4*Math.PI*2)*6 : 0;
-  ctx.fillStyle = '#111';
-  ctx.beginPath();ctx.roundRect(-16, h*0.28+armSwing, 8, 14, 3);ctx.fill();
-  ctx.beginPath();ctx.roundRect(8,   h*0.28-armSwing, 8, 14, 3);ctx.fill();
-
-  // Head (replaced with face.png)
-  ctx.drawImage(faceImg, -15, -4, 30, 30);
+  if (img.complete) {
+    // Sprite is 1200x80 -> 10 frames of 120x80
+    // Draw centered on player bottom
+    ctx.drawImage(img, frame * 120, 0, 120, 80, -75, h - 100, 150, 100);
+  }
 
   ctx.restore();
 }

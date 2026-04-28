@@ -182,8 +182,10 @@ window.addEventListener('resize', resize);
 // ─── Game state ─────────────────────────────────────────────────────────────
 const skyImg = new Image();
 skyImg.src = '../../assets/sky.png';
-const faceImg = new Image();
-faceImg.src = '../../assets/face.png';
+const idleImg = new Image();
+idleImg.src = '../../assets/character/standing/_Idle.png';
+const runImg = new Image();
+runImg.src = '../../assets/character/running/_Run.png';
 
 let state = 'playing'; // playing | moving | won
 let lastTime = 0;
@@ -330,15 +332,10 @@ function update(dt) {
     }
 
     // Walking animation
-    if (Math.abs(player.vx) > 0 || Math.abs(player.vy) > 0) {
-      player.frameTimer += dt;
-      if (player.frameTimer > 120) { 
-        player.frame = (player.frame + 1) % 4; 
-        player.frameTimer = 0; 
-      }
-    } else {
-      player.frame = 0;
-    }
+  player.frameTimer += dt;
+  if (player.frameTimer > 80) {
+    player.frame = (player.frame + 1) % 10;
+    player.frameTimer = 0;
   }
 }
 
@@ -428,36 +425,30 @@ function drawMountains(W, gY) {
 }
 
 function drawPlatform() {
-  const px = endPoint.x * CELL_SIZE;
-  const py = endPoint.y * CELL_SIZE;
-  const pw = (COLS - endPoint.x) * CELL_SIZE;
-  const ph = GROUND_Y - py;
+  const startX = endPoint.x;
+  const startY = endPoint.y;
+  const blocks = 4;
 
-  ctx.fillStyle = '#606060';
-  ctx.fillRect(px, py, pw, ph);
-  ctx.fillStyle = '#808080';
-  ctx.fillRect(px, py, pw, 6);
-  ctx.fillStyle = '#404040';
-  ctx.fillRect(px, py + ph - 6, pw, 6);
+  for (let i = 0; i < blocks; i++) {
+    const px = (startX + i) * CELL_SIZE;
+    const py = startY * CELL_SIZE;
 
-  ctx.strokeStyle = '#222';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(px, py, pw, ph);
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(px, py, pw, ph);
-  ctx.clip();
-  ctx.fillStyle = '#c82000';
-  for(let i=-ph; i<pw; i+=40) {
-    ctx.beginPath();
-    ctx.moveTo(px + i, py);
-    ctx.lineTo(px + i + 20, py);
-    ctx.lineTo(px + i - 10, py + ph);
-    ctx.lineTo(px + i - 30, py + ph);
-    ctx.fill();
+    // Stone block rendering
+    ctx.fillStyle = '#a8a8a8';
+    ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+    
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(px, py, CELL_SIZE, 8);
+    ctx.fillRect(px, py, 8, CELL_SIZE);
+    
+    ctx.fillStyle = '#606060';
+    ctx.fillRect(px, py + CELL_SIZE - 8, CELL_SIZE, 8);
+    ctx.fillRect(px + CELL_SIZE - 8, py, 8, CELL_SIZE);
+    
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
   }
-  ctx.restore();
 }
 
 function drawGrid() {
@@ -518,51 +509,17 @@ function drawPlayer() {
   const f = player.facing;
   const running = Math.abs(player.vx) > 0 || Math.abs(player.vy) > 0;
   const frame = player.frame;
-  const sq = player.squash || 1;
+  const img = running ? runImg : idleImg;
 
   ctx.save();
   ctx.translate(px + w/2, py + h);
-  ctx.scale(f / sq, sq);
+  ctx.scale(f, 1);
   ctx.translate(0, -h);
 
-  const legSwing = running ? Math.sin(frame/4 * Math.PI * 2) * 8 : 0;
+  if (img.complete) {
+    ctx.drawImage(img, frame * 120, 0, 120, 80, -75, h - 100, 150, 100);
+  }
 
-  ctx.fillStyle = '#222';
-  ctx.beginPath(); ctx.roundRect(-6, h*0.55, 10, h*0.45 - legSwing*0.3, 3); ctx.fill();
-  ctx.fillStyle = '#1a1a1a';
-  ctx.beginPath(); ctx.roundRect(2, h*0.55, 10, h*0.45 + legSwing*0.3, 3); ctx.fill();
-
-  ctx.fillStyle = '#000';
-  ctx.beginPath();ctx.roundRect(-8, h-10+legSwing*0.1, 14, 8, 3);ctx.fill();
-  ctx.beginPath();ctx.roundRect(0,  h-10-legSwing*0.1, 14, 8, 3);ctx.fill();
-
-  ctx.fillStyle = '#111';
-  ctx.beginPath();ctx.roundRect(-10, h*0.25, 20, h*0.38, 3);ctx.fill();
-  
-  ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(-3, h*0.25); ctx.lineTo(-9, h*0.45); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(3, h*0.25); ctx.lineTo(9, h*0.45); ctx.stroke();
-
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.moveTo(-4, h*0.25); ctx.lineTo(4, h*0.25); ctx.lineTo(0, h*0.42); ctx.fill();
-  
-  ctx.fillStyle = '#c00'; 
-  ctx.fillRect(-1.5, h*0.25, 3, 3); 
-  ctx.fillRect(-1, h*0.28, 2, 8);  
-  
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(4, h*0.34, 4, 1.5);
-
-  ctx.fillStyle = '#333';
-  ctx.beginPath(); ctx.arc(0, h*0.48, 1.2, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(0, h*0.54, 1.2, 0, Math.PI*2); ctx.fill();
-
-  const armSwing = running ? Math.cos(frame/4*Math.PI*2)*6 : 0;
-  ctx.fillStyle = '#111';
-  ctx.beginPath();ctx.roundRect(-16, h*0.28+armSwing, 8, 14, 3);ctx.fill();
-  ctx.beginPath();ctx.roundRect(8,   h*0.28-armSwing, 8, 14, 3);ctx.fill();
-
-  ctx.drawImage(faceImg, -15, -4, 30, 30);
   ctx.restore();
 }
 
