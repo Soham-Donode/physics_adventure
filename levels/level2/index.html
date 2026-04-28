@@ -3,37 +3,578 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhysicsQuest – Level 2: Bridge Builder</title>
+<title>PhysicsQuest – Level 2: Bresenham Bridge</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body {
-  background:#1a1a2e;
-  font-family:'Press Start 2P', monospace;
-  display:flex; align-items:center; justify-content:center;
-  min-height:100vh; flex-direction:column; text-align:center;
-  padding:40px;
+/* ── Pixel font ─────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; image-rendering:pixelated; }
+body { background:#000; font-family:'Press Start 2P',monospace; overflow:hidden; user-select:none; }
+
+#viewport {
+  position: absolute;
+  width: 1200px;
+  height: 900px;
+  background: #5c94fc;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+  border: 4px solid #333;
+  transform-origin: 0 0;
 }
-h1 { color:#f8f878; font-size:20px; text-shadow:3px 3px 0 #600000; margin-bottom:20px; }
-p  { color:#a8d8f8; font-size:8px; line-height:2.5; margin-bottom:30px; }
-.back-btn {
-  display:inline-block;
-  padding:14px 28px;
-  background:#3c5aa6; border:4px solid #000;
-  box-shadow:4px 4px 0 #1a2a6c;
-  color:#f8f878; font-family:'Press Start 2P',monospace;
-  font-size:9px; cursor:pointer; text-decoration:none;
-  transition:transform .15s;
+
+#gameCanvas { display:block; width:100%; height:100%; cursor: pointer; }
+
+/* ── HUD ────────────────────────────────────── */
+#hud {
+  position:fixed; top:0; left:0; right:0;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 16px;
+  background:#3c5aa6;
+  border-bottom:4px solid #1a2a6c;
+  z-index:10; pointer-events:none;
+  image-rendering:pixelated;
 }
-.back-btn:hover { transform:translate(-2px,-2px); box-shadow:6px 6px 0 #1a2a6c; }
-.back-btn:active { transform:translate(2px,2px); box-shadow:2px 2px 0 #1a2a6c; }
-.icon { font-size:48px; margin-bottom:20px; display:block; }
+#hud .title { color:#f8f878; font-size:9px; letter-spacing:1px; text-shadow:2px 2px #1a2a6c; }
+#hud .info  { color:#f8f878; font-size:9px; text-shadow:2px 2px #1a2a6c; }
+#hud .keys  { color:#a8d8f8; font-size:7px; }
+
+/* ── Overlay ────────────────────────────────── */
+#overlay {
+  position:absolute; inset:0;
+  background:rgba(0,0,0,0.85);
+  z-index:100; display:flex; align-items:center; justify-content:center;
+  flex-direction:column; text-align:center;
+  opacity:0; pointer-events:none;
+  transition:opacity 0.8s ease;
+}
+#overlay.show { opacity:1; pointer-events:auto; }
+#overlay h1 {
+  font-size:24px; margin-bottom:14px;
+  text-shadow:3px 3px #000;
+}
+#overlay p  { font-size:9px; color:#ccc; margin-bottom:28px; line-height:2; }
+#overlay button {
+  padding:12px 28px;
+  background:#c82000; border:4px solid #000;
+  box-shadow:4px 4px 0 #600000;
+  color:#fff; font-family:'Press Start 2P',monospace;
+  font-size:10px; cursor:pointer;
+}
+#overlay button:hover { box-shadow:6px 6px 0 #600000; transform:translate(-1px,-1px); }
+.win-text  { color:#50f878; }
+
+.dialog-box {
+  position: absolute;
+  top: 80px; left: 20px;
+  background:#e8d8a0;
+  border:4px solid #000;
+  box-shadow: -4px 0 0 #000, 4px 0 0 #000, 0 -4px 0 #000, 0 4px 0 #000, inset -4px 0 0 #b8a870, inset 4px 0 0 #fff8d8, inset 0 -4px 0 #b8a870, inset 0 4px 0 #fff8d8;
+  padding:20px 24px;
+  width:340px;
+  image-rendering:pixelated;
+  z-index: 50;
+  pointer-events: none;
+}
+.dialog-box h2 {
+  color:#3c2800; font-size:10px; margin-bottom:10px;
+  text-shadow:1px 1px #fff8d8;
+  border-bottom:3px solid #3c2800; padding-bottom:8px;
+}
+.dialog-box .sub {
+  color:#5a3800; font-size:7px; margin-bottom:14px;
+  line-height:2; letter-spacing:0.5px;
+}
+.formula-box {
+  background:#c8b870;
+  border:3px solid #3c2800;
+  box-shadow:inset 2px 2px 0 #b8a060, inset -2px -2px 0 #e8d88c;
+  padding:10px 12px; margin-bottom:14px;
+  color:#3c2000; font-size:7px; line-height:2.2;
+}
+.formula-box code { color:#c03000; font-family:'Press Start 2P',monospace; font-size:7px; }
+
+#toast {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #c82000;
+  color: white;
+  padding: 14px 20px;
+  font-size: 12px;
+  border: 4px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  z-index: 200;
+}
+#toast.show { opacity: 1; }
+
 </style>
 </head>
 <body>
-  <span class="icon">🌉</span>
-  <h1>Level 2: Bridge Builder</h1>
-  <p>Apply forces &amp; torques to build stable bridges.<br>This level is coming soon!</p>
-  <a class="back-btn" href="../../index.html">🏠 Back to Menu</a>
+
+<div id="viewport">
+  <div id="hud">
+    <span class="title">⚡ PhysicsQuest — Level 2: Bresenham Bridge</span>
+    <span class="info" id="pointInfo">Points: 1/10</span>
+    <span class="keys">Click the grid to plot the Bresenham line!</span>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="algoDialog" class="dialog-box">
+    <h2>🌉 Bresenham Line</h2>
+    <p class="sub">Plot the pixels to build a bridge to the platform!</p>
+    <div class="formula-box">
+      <strong>Start:</strong> (2, 8)<br>
+      <strong>End:</strong> (11, 3)<br><br>
+      <code>dx = |11 - 2| = 9</code><br>
+      <code>dy = |3 - 8| = 5</code><br>
+    </div>
+    <p class="sub">Click the correct grid cells one by one to form the line.</p>
+  </div>
+
+  <div id="toast">Wrong Pixel!</div>
+
+  <!-- Win/lose overlay -->
+  <div id="overlay">
+    <h1 id="overlayTitle" class="win-text">🏁 Level 2 Complete!</h1>
+    <p id="overlayMsg">You've mastered the Bresenham line!</p>
+    <button onclick="window.location.href='../../index.html'" style="background:#3c5aa6;box-shadow:4px 4px 0 #1a2a6c;">🏠 Menu</button>
+  </div>
+</div>
+
+<script>
+// ─── Canvas setup ───────────────────────────────────────────────────────────
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const vp = document.getElementById('viewport');
+  const internalW = 1200;
+  const internalH = 900;
+  const targetRatio = internalW / internalH;
+  
+  let w = window.innerWidth;
+  let h = window.innerHeight;
+  
+  if (w / h > targetRatio) {
+    w = h * targetRatio;
+  } else {
+    h = w / targetRatio;
+  }
+  
+  canvas.width = internalW;
+  canvas.height = internalH;
+  
+  const scale = h / internalH;
+  vp.style.transform = `scale(${scale})`;
+  
+  vp.style.left = (window.innerWidth - w) / 2 + 'px';
+  vp.style.top = (window.innerHeight - h) / 2 + 'px';
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ─── Game state ─────────────────────────────────────────────────────────────
+const skyImg = new Image();
+skyImg.src = '../../assets/sky.png';
+const faceImg = new Image();
+faceImg.src = '../../assets/face.png';
+
+let state = 'playing'; // playing | moving | won
+let lastTime = 0;
+
+const CELL_SIZE = 80;
+const COLS = 15;
+const ROWS = 10; // y: 0 to 9
+const GROUND_Y = 800;
+
+const startPoint = {x: 2, y: 8};
+const endPoint = {x: 11, y: 3};
+
+let bresenhamPoints = [];
+let plottedPixels = [];
+let currentPlotIndex = 1;
+
+let player = {
+  x: startPoint.x * CELL_SIZE + CELL_SIZE/2 - 14,
+  y: startPoint.y * CELL_SIZE - 44,
+  w: 28, h: 44,
+  vx: 0, vy: 0,
+  facing: 1,
+  frame: 0, frameTimer: 0,
+  squash: 1,
+  targetIndex: 1
+};
+
+function calculateBresenham(x0, y0, x1, y1) {
+  let pts = [];
+  let dx = Math.abs(x1 - x0);
+  let dy = Math.abs(y1 - y0);
+  let sx = (x0 < x1) ? 1 : -1;
+  let sy = (y0 < y1) ? 1 : -1;
+  let err = dx - dy;
+
+  let x = x0;
+  let y = y0;
+
+  while(true) {
+    pts.push({x: x, y: y});
+    if (x === x1 && y === y1) break;
+    let e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; x += sx; }
+    if (e2 < dx) { err += dx; y += sy; }
+  }
+  return pts;
+}
+
+function init() {
+  bresenhamPoints = calculateBresenham(startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+  plottedPixels.push(bresenhamPoints[0]);
+  document.getElementById('pointInfo').textContent = `Points: ${currentPlotIndex}/${bresenhamPoints.length}`;
+  requestAnimationFrame(ts => { lastTime = ts; requestAnimationFrame(loop); });
+}
+
+// ─── Input ──────────────────────────────────────────────────────────────────
+canvas.addEventListener('click', (e) => {
+  if (state !== 'playing') return;
+
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  
+  const cx = (e.clientX - rect.left) * scaleX;
+  const cy = (e.clientY - rect.top) * scaleY;
+
+  const gx = Math.floor(cx / CELL_SIZE);
+  const gy = Math.floor(cy / CELL_SIZE);
+
+  if (gx >= 0 && gx < COLS && gy >= 0 && gy < ROWS) {
+    checkPixel(gx, gy);
+  }
+});
+
+function checkPixel(gx, gy) {
+  if (currentPlotIndex >= bresenhamPoints.length) return;
+
+  // Check if already plotted
+  for(let i=0; i<currentPlotIndex; i++){
+     if(bresenhamPoints[i].x === gx && bresenhamPoints[i].y === gy) return;
+  }
+
+  const nextP = bresenhamPoints[currentPlotIndex];
+
+  if (gx === nextP.x && gy === nextP.y) {
+    plottedPixels.push({x: gx, y: gy});
+    currentPlotIndex++;
+    
+    document.getElementById('pointInfo').textContent = `Points: ${currentPlotIndex}/${bresenhamPoints.length}`;
+
+    if (currentPlotIndex === bresenhamPoints.length) {
+      showToast('Path Complete!', false);
+      state = 'moving';
+      player.targetIndex = 1;
+    } else {
+      showToast('Correct!', false);
+    }
+  } else {
+    showToast('Wrong Pixel!', true);
+  }
+}
+
+let toastTimeout;
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.backgroundColor = isError ? '#c82000' : '#389828';
+  t.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ─── Update ──────────────────────────────────────────────────────────────────
+function update(dt) {
+  if (state === 'moving') {
+    const target = bresenhamPoints[player.targetIndex];
+    if (!target) return;
+    
+    const targetPx = target.x * CELL_SIZE + CELL_SIZE/2 - player.w/2;
+    const targetPy = target.y * CELL_SIZE - player.h;
+    
+    const dx = targetPx - player.x;
+    const dy = targetPy - player.y;
+    
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const speed = 0.2 * dt; // movement speed
+    
+    if (dist < speed) {
+      player.x = targetPx;
+      player.y = targetPy;
+      player.targetIndex++;
+      player.vx = 0;
+      player.vy = 0;
+      if (player.targetIndex >= bresenhamPoints.length) {
+        state = 'won';
+        setTimeout(showWin, 500);
+      }
+    } else {
+      player.vx = (dx / dist) * speed;
+      player.vy = (dy / dist) * speed;
+      player.x += player.vx;
+      player.y += player.vy;
+      player.facing = player.vx > 0 ? 1 : -1;
+    }
+
+    // Walking animation
+    if (Math.abs(player.vx) > 0 || Math.abs(player.vy) > 0) {
+      player.frameTimer += dt;
+      if (player.frameTimer > 120) { 
+        player.frame = (player.frame + 1) % 4; 
+        player.frameTimer = 0; 
+      }
+    } else {
+      player.frame = 0;
+    }
+  }
+}
+
+function showWin() {
+  document.getElementById('overlay').classList.add('show');
+}
+
+// ─── Rendering ───────────────────────────────────────────────────────────────
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  
+  // Background
+  ctx.drawImage(skyImg, 0, 50, W, H - 50);
+
+  drawMountains(W, GROUND_Y);
+  drawGroundTiles(W, GROUND_Y, H);
+  
+  drawPlatform();
+  drawGrid();
+  drawPixels();
+  drawLabels();
+  
+  drawPlayer();
+}
+
+function drawGroundTiles(W, gY, H) {
+  const T = 32;
+  const grassColors  = ['#58b848', '#50a840', '#60c050'];
+  const dirtColors   = ['#a85830', '#9a5028', '#b06038'];
+  const darkDirt     = ['#804020', '#704018', '#885028'];
+
+  ctx.fillStyle = '#9a5028';
+  ctx.fillRect(0, gY, W, H - gY);
+
+  const rows = Math.ceil((H - gY) / T) + 1;
+  for (let row = 0; row < rows; row++) {
+    const ty = gY + row * T;
+    const cols = Math.ceil(W / T) + 1;
+    for (let col = 0; col < cols; col++) {
+      const tx = col * T;
+      const isGrass = row === 0;
+      const seed = (col * 3 + row * 7) % 3;
+
+      ctx.fillStyle = isGrass ? grassColors[seed] : (row < 3 ? dirtColors[seed] : darkDirt[seed]);
+      ctx.fillRect(tx, ty, T, T);
+
+      if (isGrass) {
+        ctx.fillStyle = '#78d860';
+        ctx.fillRect(tx + 1, ty + 1, T - 2, 4);
+        ctx.fillStyle = '#389828';
+        ctx.fillRect(tx + 1, ty + T - 4, T - 2, 3);
+      } else {
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillRect(tx + 6, ty + 8, 5, 3);
+        ctx.fillRect(tx + T - 12, ty + T - 10, 4, 2);
+      }
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(tx + 0.5, ty + 0.5, T - 1, T - 1);
+    }
+  }
+}
+
+function drawMountains(W, gY) {
+  ctx.fillStyle = 'rgba(100,160,80,0.45)';
+  ctx.beginPath();
+  ctx.moveTo(0, gY);
+  const pts = [
+    [0,gY], [80,gY-80], [160,gY-40], [240,gY-110], [320,gY-60],
+    [400,gY-130], [480,gY-70], [560,gY-140], [640,gY-80],
+    [720,gY-120], [800,gY-50], [W,gY-90], [W,gY]
+  ];
+  pts.forEach(([x,y]) => ctx.lineTo(x,y));
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = 'rgba(80,140,60,0.3)';
+  ctx.beginPath();
+  ctx.moveTo(0, gY);
+  const pts2 = [
+    [0,gY], [120,gY-50], [200,gY-20], [300,gY-80], [400,gY-40],
+    [500,gY-90], [600,gY-45], [700,gY-100], [W,gY-60], [W,gY]
+  ];
+  pts2.forEach(([x,y]) => ctx.lineTo(x,y));
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawPlatform() {
+  const px = endPoint.x * CELL_SIZE;
+  const py = endPoint.y * CELL_SIZE;
+  const pw = (COLS - endPoint.x) * CELL_SIZE;
+  const ph = GROUND_Y - py;
+
+  ctx.fillStyle = '#606060';
+  ctx.fillRect(px, py, pw, ph);
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(px, py, pw, 6);
+  ctx.fillStyle = '#404040';
+  ctx.fillRect(px, py + ph - 6, pw, 6);
+
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(px, py, pw, ph);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(px, py, pw, ph);
+  ctx.clip();
+  ctx.fillStyle = '#c82000';
+  for(let i=-ph; i<pw; i+=40) {
+    ctx.beginPath();
+    ctx.moveTo(px + i, py);
+    ctx.lineTo(px + i + 20, py);
+    ctx.lineTo(px + i - 10, py + ph);
+    ctx.lineTo(px + i - 30, py + ph);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawGrid() {
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+  ctx.lineWidth = 1;
+
+  for (let x=0; x<=COLS; x++) {
+    ctx.beginPath();
+    ctx.moveTo(x*CELL_SIZE, 0);
+    ctx.lineTo(x*CELL_SIZE, ROWS*CELL_SIZE);
+    ctx.stroke();
+  }
+  for (let y=0; y<=ROWS; y++) {
+    ctx.beginPath();
+    ctx.moveTo(0, y*CELL_SIZE);
+    ctx.lineTo(COLS*CELL_SIZE, y*CELL_SIZE);
+    ctx.stroke();
+  }
+}
+
+function drawPixels() {
+  for (let i=0; i<plottedPixels.length; i++) {
+    const p = plottedPixels[i];
+    const px = p.x * CELL_SIZE;
+    const py = p.y * CELL_SIZE;
+
+    ctx.fillStyle = '#a8a8a8';
+    ctx.fillRect(px, py, CELL_SIZE, CELL_SIZE);
+    
+    ctx.fillStyle = '#e0e0e0';
+    ctx.fillRect(px, py, CELL_SIZE, 8);
+    ctx.fillRect(px, py, 8, CELL_SIZE);
+    
+    ctx.fillStyle = '#606060';
+    ctx.fillRect(px, py + CELL_SIZE - 8, CELL_SIZE, 8);
+    ctx.fillRect(px + CELL_SIZE - 8, py, 8, CELL_SIZE);
+    
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(px, py, CELL_SIZE, CELL_SIZE);
+  }
+}
+
+function drawLabels() {
+  ctx.fillStyle = '#50f878';
+  ctx.font = '12px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('START', startPoint.x * CELL_SIZE + CELL_SIZE/2, startPoint.y * CELL_SIZE - 60);
+
+  ctx.fillStyle = '#f8f878';
+  ctx.fillText('END', endPoint.x * CELL_SIZE + CELL_SIZE/2, endPoint.y * CELL_SIZE - 20);
+  ctx.textAlign = 'left';
+}
+
+function drawPlayer() {
+  const px = player.x, py = player.y;
+  const w = player.w, h = player.h;
+  const f = player.facing;
+  const running = Math.abs(player.vx) > 0 || Math.abs(player.vy) > 0;
+  const frame = player.frame;
+  const sq = player.squash || 1;
+
+  ctx.save();
+  ctx.translate(px + w/2, py + h);
+  ctx.scale(f / sq, sq);
+  ctx.translate(0, -h);
+
+  const legSwing = running ? Math.sin(frame/4 * Math.PI * 2) * 8 : 0;
+
+  ctx.fillStyle = '#222';
+  ctx.beginPath(); ctx.roundRect(-6, h*0.55, 10, h*0.45 - legSwing*0.3, 3); ctx.fill();
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath(); ctx.roundRect(2, h*0.55, 10, h*0.45 + legSwing*0.3, 3); ctx.fill();
+
+  ctx.fillStyle = '#000';
+  ctx.beginPath();ctx.roundRect(-8, h-10+legSwing*0.1, 14, 8, 3);ctx.fill();
+  ctx.beginPath();ctx.roundRect(0,  h-10-legSwing*0.1, 14, 8, 3);ctx.fill();
+
+  ctx.fillStyle = '#111';
+  ctx.beginPath();ctx.roundRect(-10, h*0.25, 20, h*0.38, 3);ctx.fill();
+  
+  ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-3, h*0.25); ctx.lineTo(-9, h*0.45); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3, h*0.25); ctx.lineTo(9, h*0.45); ctx.stroke();
+
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.moveTo(-4, h*0.25); ctx.lineTo(4, h*0.25); ctx.lineTo(0, h*0.42); ctx.fill();
+  
+  ctx.fillStyle = '#c00'; 
+  ctx.fillRect(-1.5, h*0.25, 3, 3); 
+  ctx.fillRect(-1, h*0.28, 2, 8);  
+  
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(4, h*0.34, 4, 1.5);
+
+  ctx.fillStyle = '#333';
+  ctx.beginPath(); ctx.arc(0, h*0.48, 1.2, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, h*0.54, 1.2, 0, Math.PI*2); ctx.fill();
+
+  const armSwing = running ? Math.cos(frame/4*Math.PI*2)*6 : 0;
+  ctx.fillStyle = '#111';
+  ctx.beginPath();ctx.roundRect(-16, h*0.28+armSwing, 8, 14, 3);ctx.fill();
+  ctx.beginPath();ctx.roundRect(8,   h*0.28-armSwing, 8, 14, 3);ctx.fill();
+
+  ctx.drawImage(faceImg, -15, -4, 30, 30);
+  ctx.restore();
+}
+
+function loop(ts) {
+  const dt = Math.min(ts - lastTime, 32);
+  lastTime = ts;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+init();
+</script>
 </body>
 </html>
