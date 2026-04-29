@@ -100,10 +100,12 @@ function checkWinCondition() {
     if (window.sounds) window.sounds.win();
     showToast('Perfect Transformation!', false);
     state = 'moving';
+    return true;
   } else {
     if (wood.x !== wood.initialX || wood.y !== wood.initialY || wood.angle !== wood.initialAngle) {
       showToast('Incorrect Placement!', true);
     }
+    return false;
   }
 }
 

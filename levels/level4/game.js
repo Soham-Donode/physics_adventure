@@ -11,7 +11,7 @@ let state = 'menu'; // menu | playing | dead | won
 let lastTime = 0;
 
 const GROUND_Y = 800;
-const V_MAN_PX = 300;   // 15 * 20
+const V_MAN_PX = 400;   // 20 * 20
 const V_ARROW_PX = 400; // 20 * 20
 const TIME_TO_WIN = 5000;
 
@@ -146,7 +146,7 @@ function draw() {
 function drawShield() {
   const cx = player.x + player.w/2;
   const cy = player.y - 10;
-  const len = 100;
+  const len = 140;
   const angleRad = shieldAngle * Math.PI / 180;
   
   ctx.save();

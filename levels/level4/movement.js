@@ -2,11 +2,11 @@ function updateMovement(dt, player, state, globalVars, arrows, particles, TIME_T
   if (state === 'playing') {
     globalVars.groundOffset += (V_MAN_PX * dt / 1000);
 
-    if (Math.random() < 0.4) {
+    if (Math.random() < 0.6) {
       arrows.push({
-        x: player.x + Math.random() * 800 - 50,
-        y: -50,
-        vx: -V_MAN_PX,
+        x: player.x + player.w/2 + (Math.random() * 300 - 150), // Spread around player
+        y: -100,
+        vx: 0, // Fall straight down in world frame
         vy: V_ARROW_PX,
         active: true
       });
@@ -14,7 +14,7 @@ function updateMovement(dt, player, state, globalVars, arrows, particles, TIME_T
 
     const cx = player.x + player.w/2;
     const cy = player.y - 10;
-    const len = 100;
+    const len = 140;
     const angleRad = shieldAngle * Math.PI / 180;
     const p1x = cx - Math.cos(angleRad) * len/2;
     const p1y = cy - Math.sin(angleRad) * len/2;

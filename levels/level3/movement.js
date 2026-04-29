@@ -7,7 +7,9 @@ function updateMovement(dt, player, state, wood, checkWinCondition, GROUND_Y) {
       wood.x = wood.targetX;
       wood.y = wood.targetY;
       wood.angle = wood.targetAngle;
-      checkWinCondition();
+      if (checkWinCondition()) {
+        state = 'moving';
+      }
     } else {
       const t = wood.animProgress;
       const ease = 1 - Math.pow(1 - t, 3); // cubic ease out
@@ -31,6 +33,7 @@ function updateMovement(dt, player, state, wood, checkWinCondition, GROUND_Y) {
     } else {
       player.vx = 0;
       state = 'won';
+      localStorage.setItem('level3_completed', 'true');
       setTimeout(() => document.getElementById('overlay').classList.add('show'), 500);
     }
     player.x += player.vx;
