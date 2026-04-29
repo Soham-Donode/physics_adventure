@@ -1,4 +1,4 @@
-function updateMovement(dt, player, state, keys, platforms, GRAVITY_PLAYER, canvas, enemies, showWin, GROUND_Y, shake, muzzleFlash, hitEffects, particles, projectile, SLOW_MO, SCALE, G_PHYSICS, spawnParticles, clearProjectile, restartGame, showHint) {
+function updateMovement(dt, player, state, keys, platforms, GRAVITY_PLAYER, canvas, enemies, showWin, GROUND_Y, shake, muzzleFlash, hitEffects, particles, projectile, SLOW_MO, SCALE, G_PHYSICS, spawnParticles, clearProjectile, restartGame, showHint, currentAngle) {
   if (state !== 'playing') return state;
 
   const gY = GROUND_Y();
@@ -60,7 +60,7 @@ function updateMovement(dt, player, state, keys, platforms, GRAVITY_PLAYER, canv
   for (const e of enemies) {
     if (!e.alive) continue;
     if (player.x + player.w > e.x && player.x < e.x + e.w &&
-        player.y + player.h > e.y && player.y < e.y + e.h) {
+        player.y + player.h > e.y && player.y < e.y + e.h && currentAngle !== 45) {
       spawnParticles(player.x + player.w/2, player.y + player.h/2, '#ff4444', 22);
       setTimeout(() => restartGame(), 600); // brief delay to show particles
       return 'dead';
